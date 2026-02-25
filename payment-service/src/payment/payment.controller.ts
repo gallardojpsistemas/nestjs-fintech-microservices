@@ -5,9 +5,19 @@ import { PaymentService } from './payment.service';
 export class PaymentController {
     constructor(private readonly paymentService: PaymentService) { }
 
-    @Post('pix')
-    createPix(@Body() body: { userId: string; amount: number }) {
-        return this.paymentService.createPix(body.userId, body.amount);
+    @Post('')
+    createPayment(
+        @Body() body: {
+            type: string;
+            userId: string;
+            amount: number;
+        },
+    ) {
+        return this.paymentService.createPayment(
+            body.type,
+            body.userId,
+            body.amount,
+        );
     }
 
     @Post('webhook/pix')

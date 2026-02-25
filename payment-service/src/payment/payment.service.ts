@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Payment, PaymentDocument } from './schemas/payment.schema';
 import { serviceCall } from 'src/common/service-call-util';
 import { ConfigService } from '@nestjs/config';
+import { PixStrategy } from './strategies/pix.strategy';
 
 @Injectable()
 export class PaymentService {
@@ -11,23 +12,21 @@ export class PaymentService {
         @InjectModel(Payment.name)
         private paymentModel: Model<PaymentDocument>,
         private readonly configService: ConfigService,
+        private readonly pixStrategy: PixStrategy,
     ) { }
 
-    async createPix(userId: string, amount: number) {
-        const txId = `PIX-${Date.now()}`;
+    async createPayment(
+        type: string,
+        userId: string,
+        amount: number,
+    ) {
+        switch (type) {
+            case 'pix':
+                return this.pixStrategy.createPayment(userId, amount);
 
-        const payment = await this.paymentModel.create({
-            userId,
-            amount,
-            type: 'pix',
-            status: 'pending',
-            txId,
-        });
-
-        return {
-            txId,
-            status: payment.status,
-        };
+            default:
+                throw new BadRequestException('Invalid payment type');
+        }
     }
 
     async confirmPix(txId: string) {

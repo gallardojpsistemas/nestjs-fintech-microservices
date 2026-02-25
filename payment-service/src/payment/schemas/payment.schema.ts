@@ -15,13 +15,16 @@ export class Payment {
     type: string; // pix
 
     @Prop({ default: 'pending' })
-    status: string; // pending | paid | failed
+    status: string; // pending | paid | expired | reissued
 
     @Prop({ required: true, unique: true })
     txId: string; // simulated PIX transaction id
 
     @Prop()
     dueDate?: Date;
+
+    @Prop()
+    originalTxId?: string;
 }
 
 export const PaymentSchema = SchemaFactory.createForClass(Payment);

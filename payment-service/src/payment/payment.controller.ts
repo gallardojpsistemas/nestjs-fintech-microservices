@@ -22,8 +22,8 @@ export class PaymentController {
         );
     }
 
-    @Post('webhook/pix')
+    @Post('webhook')
     confirmPix(@Body() body: { txId: string }) {
-        return this.paymentService.confirmPix(body.txId);
+        return this.paymentService.confirmPayment(body.txId);
     }
 }

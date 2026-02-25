@@ -35,7 +35,7 @@ export class PaymentService {
         }
     }
 
-    async confirmPix(txId: string) {
+    async confirmPayment(txId: string) {
         const payment = await this.paymentModel.findOne({ txId });
 
         if (!payment)
@@ -48,13 +48,27 @@ export class PaymentService {
             };
         }
 
+        if (payment.type === 'boleto' && payment.dueDate) {
+            const now = new Date();
+
+            if (now > payment.dueDate) {
+                payment.status = 'expired';
+                await payment.save();
+
+                return {
+                    message: 'Boleto expired',
+                    txId,
+                };
+            }
+        }
+
         payment.status = 'paid';
         await payment.save();
 
         await this.depositToWallet(payment.userId, payment.amount);
 
         return {
-            message: 'PIX confirmed',
+            message: 'Payment confirmed',
             txId,
         };
     }

@@ -9,4 +9,9 @@ export class PaymentController {
     createPix(@Body() body: { userId: string; amount: number }) {
         return this.paymentService.createPix(body.userId, body.amount);
     }
+
+    @Post('webhook/pix')
+    confirmPix(@Body() body: { txId: string }) {
+        return this.paymentService.confirmPix(body.txId);
+    }
 }

@@ -19,6 +19,9 @@ export class Payment {
 
     @Prop({ required: true, unique: true })
     txId: string; // simulated PIX transaction id
+
+    @Prop()
+    dueDate?: Date;
 }
 
 export const PaymentSchema = SchemaFactory.createForClass(Payment);

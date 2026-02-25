@@ -11,12 +11,14 @@ export class PaymentController {
             type: string;
             userId: string;
             amount: number;
+            dueDate?: string;
         },
     ) {
         return this.paymentService.createPayment(
             body.type,
             body.userId,
             body.amount,
+            body.dueDate,
         );
     }
 

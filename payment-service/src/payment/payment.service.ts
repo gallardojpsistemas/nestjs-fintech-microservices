@@ -5,6 +5,7 @@ import { Payment, PaymentDocument } from './schemas/payment.schema';
 import { serviceCall } from 'src/common/service-call-util';
 import { ConfigService } from '@nestjs/config';
 import { PixStrategy } from './strategies/pix.strategy';
+import { BoletoStrategy } from './strategies/boleto.strategy';
 
 @Injectable()
 export class PaymentService {
@@ -13,16 +14,21 @@ export class PaymentService {
         private paymentModel: Model<PaymentDocument>,
         private readonly configService: ConfigService,
         private readonly pixStrategy: PixStrategy,
+        private readonly boletoStrategy: BoletoStrategy,
     ) { }
 
     async createPayment(
         type: string,
         userId: string,
         amount: number,
+        dueDate?: string,
     ) {
         switch (type) {
             case 'pix':
                 return this.pixStrategy.createPayment(userId, amount);
+
+            case 'boleto':
+                return this.boletoStrategy.createPayment(userId, amount, dueDate!);
 
             default:
                 throw new BadRequestException('Invalid payment type');

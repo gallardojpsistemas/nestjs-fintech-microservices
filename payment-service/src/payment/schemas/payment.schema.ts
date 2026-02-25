@@ -17,7 +17,7 @@ export class Payment {
     @Prop({ default: 'pending' })
     status: string; // pending | paid | failed
 
-    @Prop()
+    @Prop({ required: true, unique: true })
     txId: string; // simulated PIX transaction id
 }
 

@@ -36,8 +36,12 @@ export class PaymentService {
         if (!payment)
             throw new Error('Payment not found');
 
-        if (payment.status === 'paid')
-            return { message: 'Already confirmed' };
+        if (payment.status === 'paid') {
+            return {
+                message: 'Already processed',
+                txId,
+            };
+        }
 
         payment.status = 'paid';
         await payment.save();

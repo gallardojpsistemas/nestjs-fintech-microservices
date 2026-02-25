@@ -7,11 +7,13 @@ import { JwtStrategy } from './jwt/jwt.strategy';
 import { RolesGuard } from './guards/roles.guard';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { StringValue } from 'ms';
+import { HttpModule } from '@nestjs/axios';
 
 @Module({
   imports: [
     UsersModule,
     ConfigModule,
+    HttpModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({

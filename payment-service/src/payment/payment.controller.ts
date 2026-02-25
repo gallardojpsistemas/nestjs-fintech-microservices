@@ -26,4 +26,15 @@ export class PaymentController {
     confirmPix(@Body() body: { txId: string }) {
         return this.paymentService.confirmPayment(body.txId);
     }
+
+    @Post('reissue')
+    reissue(
+        @Body()
+        body: { txId: string; newDueDate: string },
+    ) {
+        return this.paymentService.reissueBoleto(
+            body.txId,
+            body.newDueDate,
+        );
+    }
 }

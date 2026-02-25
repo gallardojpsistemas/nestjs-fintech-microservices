@@ -73,6 +73,40 @@ export class PaymentService {
         };
     }
 
+    async reissueBoleto(txId: string, newDueDate: string) {
+        const payment = await this.paymentModel.findOne({ txId });
+
+        if (!payment)
+            throw new Error('Payment not found');
+
+        if (payment.type !== 'boleto')
+            throw new Error('Only boleto can be reissued');
+
+        if (payment.status !== 'expired')
+            throw new Error('Only expired boletos can be reissued');
+
+        payment.status = 'reissued';
+        await payment.save();
+
+        const newTxId = `BOLETO-${Date.now()}`;
+
+        const newPayment = await this.paymentModel.create({
+            userId: payment.userId,
+            amount: payment.amount,
+            type: 'boleto',
+            status: 'pending',
+            txId: newTxId,
+            dueDate: new Date(newDueDate),
+            originalTxId: payment.txId,
+        });
+
+        return {
+            oldTxId: payment.txId,
+            newTxId: newPayment.txId,
+            dueDate: newPayment.dueDate,
+        };
+    }
+
     private async depositToWallet(userId: string, amount: number) {
         const services = JSON.parse(
             this.configService.getOrThrow<string>('SERVICES'),

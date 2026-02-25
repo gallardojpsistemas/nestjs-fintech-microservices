@@ -8,7 +8,7 @@ import { CreateTransactionDto } from './dto/create-transaction.dto';
 export class LedgerService {
     constructor(
         @InjectModel(Transaction.name)
-        private transactionModel: Model<TransactionDocument>,
+        private readonly transactionModel: Model<TransactionDocument>,
     ) { }
 
     async createTransaction(data: CreateTransactionDto) {

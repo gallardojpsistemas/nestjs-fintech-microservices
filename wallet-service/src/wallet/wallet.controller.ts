@@ -1,9 +1,19 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { WalletService } from './wallet.service';
+import { TransferDto } from './dto/transfer.dto';
 
 @Controller('wallet')
 export class WalletController {
     constructor(private readonly walletService: WalletService) { }
+
+    @Post('transfer')
+    transfer(@Body() body: TransferDto) {
+        return this.walletService.transfer(
+            body.fromUserId,
+            body.toUserId,
+            body.amount,
+        );
+    }
 
     @Post(':userId')
     create(@Param('userId') userId: string) {

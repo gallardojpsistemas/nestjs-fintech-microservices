@@ -2,12 +2,15 @@ import { Injectable } from '@nestjs/common';
 import { Wallet, WalletDocument } from './schemas/wallet.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { ConfigService } from '@nestjs/config';
+import { serviceCall } from 'src/common/service-call-util';
 
 @Injectable()
 export class WalletService {
     constructor(
         @InjectModel(Wallet.name)
         private readonly walletModel: Model<WalletDocument>,
+        private readonly configService: ConfigService,
     ) { }
 
     async createWallet(userId: string) {
@@ -45,10 +48,34 @@ export class WalletService {
         await fromWallet.save();
         await toWallet.save();
 
+        await this.registerLedgerTransaction(fromUserId, toUserId, amount);
+
         return {
             fromUserId,
             toUserId,
             amount,
         };
+    }
+
+    private async registerLedgerTransaction(
+        fromUserId: string,
+        toUserId: string,
+        amount: number,
+    ): Promise<void> {
+        const services = JSON.parse(
+            this.configService.getOrThrow<string>('SERVICES'),
+        ) as Record<string, string>;
+
+        await serviceCall(services, {
+            service: 'ledger',
+            method: 'POST',
+            path: '/ledger/transaction',
+            data: {
+                fromUserId,
+                toUserId,
+                amount,
+                type: 'transfer',
+            },
+        });
     }
 }

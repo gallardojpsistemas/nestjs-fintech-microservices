@@ -85,14 +85,19 @@ export class PaymentService {
         if (payment.status !== 'expired')
             throw new Error('Only expired boletos can be reissued');
 
+        const { fine, interest, updatedAmount, daysLate } = this.calculateBoletoPenalty(
+            payment.amount,
+            payment.dueDate as Date,
+        );
+
         payment.status = 'reissued';
         await payment.save();
 
         const newTxId = `BOLETO-${Date.now()}`;
 
-        const newPayment = await this.paymentModel.create({
+        await this.paymentModel.create({
             userId: payment.userId,
-            amount: payment.amount,
+            amount: updatedAmount,
             type: 'boleto',
             status: 'pending',
             txId: newTxId,
@@ -102,8 +107,12 @@ export class PaymentService {
 
         return {
             oldTxId: payment.txId,
-            newTxId: newPayment.txId,
-            dueDate: newPayment.dueDate,
+            newTxId,
+            originalAmount: payment.amount,
+            fine,
+            interest,
+            updatedAmount,
+            daysLate,
         };
     }
 
@@ -118,5 +127,31 @@ export class PaymentService {
             path: `/wallet/${userId}/deposit`,
             data: { amount },
         });
+    }
+
+    private calculateBoletoPenalty(amount: number, dueDate: Date) {
+        const ONE_DAY_IN_MS = 1000 * 60 * 60 * 24;
+        const now = new Date();
+
+        const diffTime = now.getTime() - dueDate.getTime();
+        const daysLate = Math.ceil(diffTime / ONE_DAY_IN_MS);
+
+        const fineRate = 0.02; // 2%
+        const monthlyInterestRate = 0.01; // 1% per month
+        const dailyInterestRate = monthlyInterestRate / 30;
+
+        const fine = amount * fineRate;
+        const interest = amount * dailyInterestRate * daysLate;
+
+        const updatedAmount = Number(
+            (amount + fine + interest).toFixed(2)
+        );
+
+        return {
+            fine: Number(fine.toFixed(2)),
+            interest: Number(interest.toFixed(2)),
+            updatedAmount,
+            daysLate,
+        };
     }
 }

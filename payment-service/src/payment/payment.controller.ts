@@ -42,4 +42,9 @@ export class PaymentController {
     capture(@Body() body: { txId: string }) {
         return this.paymentService.capture(body.txId);
     }
+
+    @Post('refund')
+    refund(@Body() body: { txId: string }) {
+        return this.paymentService.refund(body.txId);
+    }
 }

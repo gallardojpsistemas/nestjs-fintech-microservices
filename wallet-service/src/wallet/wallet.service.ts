@@ -25,7 +25,7 @@ export class WalletService {
         const wallet = await this.walletModel.findOneAndUpdate(
             { userId },
             { $inc: { balance: amount } },
-            { new: true },
+            { returnDocument: 'after' },
         );
 
         await this.registerLedgerEntry(userId, amount, 'deposit', 'credit');
@@ -60,6 +60,18 @@ export class WalletService {
             toUserId,
             amount,
         };
+    }
+
+    async withdraw(userId: string, amount: number) {
+        const wallet = await this.walletModel.findOneAndUpdate(
+            { userId },
+            { $inc: { balance: -amount } },
+            { returnDocument: 'after' },
+        );
+
+        await this.registerLedgerEntry(userId, amount, 'refund', 'debit');
+
+        return wallet;
     }
 
     private async registerLedgerTransaction(

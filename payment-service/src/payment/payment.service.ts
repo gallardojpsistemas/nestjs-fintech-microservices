@@ -143,6 +143,28 @@ export class PaymentService {
         };
     }
 
+    async refund(txId: string) {
+        const payment = await this.paymentModel.findOne({ txId });
+
+        if (!payment) throw new Error('Payment not found');
+
+        if (payment.type !== 'credit_card')
+            throw new Error('Only credit card payments can be refunded');
+
+        if (payment.status !== 'paid')
+            throw new Error('Only paid payments can be refunded');
+
+        payment.status = 'refunded';
+        await payment.save();
+
+        await this.withdrawFromWallet(payment);
+
+        return {
+            message: 'Payment refunded',
+            txId,
+        };
+    }
+
     private async depositToWallet(userId: string, amount: number) {
         const services = JSON.parse(
             this.configService.getOrThrow<string>('SERVICES'),
@@ -180,5 +202,21 @@ export class PaymentService {
             updatedAmount,
             daysLate,
         };
+    }
+
+    private async withdrawFromWallet(payment: PaymentDocument) {
+        const services = JSON.parse(
+            this.configService.getOrThrow<string>('SERVICES'),
+        ) as Record<string, string>;
+
+        await serviceCall(services, {
+            service: 'wallet',
+            method: 'POST',
+            path: `/wallet/${payment.userId}/withdraw`,
+            data: {
+                amount: payment.amount,
+                type: 'refund',
+            },
+        });
     }
 }

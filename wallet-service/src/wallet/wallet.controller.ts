@@ -32,4 +32,12 @@ export class WalletController {
     ) {
         return this.walletService.deposit(userId, amount);
     }
+
+    @Post(':userId/withdraw')
+    withdraw(
+        @Param('userId') userId: string,
+        @Body() body: { amount: number },
+    ) {
+        return this.walletService.withdraw(userId, body.amount);
+    }
 }

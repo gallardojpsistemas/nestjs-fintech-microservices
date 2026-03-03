@@ -22,11 +22,15 @@ export class WalletService {
     }
 
     async deposit(userId: string, amount: number) {
-        return this.walletModel.findOneAndUpdate(
+        const wallet = await this.walletModel.findOneAndUpdate(
             { userId },
             { $inc: { balance: amount } },
             { new: true },
         );
+
+        await this.registerLedgerEntry(userId, amount, 'deposit', 'credit');
+
+        return wallet;
     }
 
     async transfer(fromUserId: string, toUserId: string, amount: number) {
@@ -48,7 +52,8 @@ export class WalletService {
         await fromWallet.save();
         await toWallet.save();
 
-        await this.registerLedgerTransaction(fromUserId, toUserId, amount);
+        await this.registerLedgerEntry(fromUserId, amount, 'transfer', 'debit');
+        await this.registerLedgerEntry(toUserId, amount, 'transfer', 'credit');
 
         return {
             fromUserId,
@@ -76,6 +81,19 @@ export class WalletService {
                 amount,
                 type: 'transfer',
             },
+        });
+    }
+
+    private async registerLedgerEntry(userId: string, amount: number, type: string, direction: string): Promise<void> {
+        const services = JSON.parse(
+            this.configService.getOrThrow<string>('SERVICES'),
+        ) as Record<string, string>;
+
+        await serviceCall(services, {
+            service: 'ledger',
+            method: 'POST',
+            path: '/ledger/transaction',
+            data: { userId, amount, type, direction },
         });
     }
 }

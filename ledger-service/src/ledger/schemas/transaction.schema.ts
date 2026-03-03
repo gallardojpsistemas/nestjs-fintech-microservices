@@ -6,19 +6,19 @@ export type TransactionDocument = Transaction & Document;
 @Schema({ timestamps: true })
 export class Transaction {
     @Prop({ required: true })
-    fromUserId: string;
-
-    @Prop({ required: true })
-    toUserId: string;
+    userId: string;
 
     @Prop({ required: true })
     amount: number;
 
     @Prop({ required: true })
-    type: string; // transfer | deposit | pix etc
+    type: string;
 
-    @Prop({ default: 'completed' })
-    status: string;
+    @Prop({ required: true })
+    direction: string;
+
+    @Prop()
+    referenceId?: string;
 }
 
 export const TransactionSchema = SchemaFactory.createForClass(Transaction);

@@ -1,6 +1,7 @@
 export class CreateTransactionDto {
-    fromUserId: string;
-    toUserId: string;
+    userId: string;
     amount: number;
-    type: string;
+    type: string; // transfer | deposit | refund | etc
+    direction: 'credit' | 'debit';
+    referenceId?: string; // txId opcional
 }

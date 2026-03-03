@@ -38,6 +38,14 @@ export class WalletController {
         @Param('userId') userId: string,
         @Body() body: { amount: number },
     ) {
-        return this.walletService.withdraw(userId, body.amount);
+        return this.walletService.withdraw(userId, body.amount, LedgerOperationType.WITHDRAW);
+    }
+
+    @Post(':userId/chargeback')
+    chargeback(
+        @Param('userId') userId: string,
+        @Body() body: { amount: number },
+    ) {
+        return this.walletService.withdraw(userId, body.amount, LedgerOperationType.CHARGEBACK);
     }
 }

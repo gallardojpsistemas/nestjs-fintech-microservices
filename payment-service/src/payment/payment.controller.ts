@@ -47,4 +47,9 @@ export class PaymentController {
     refund(@Body() body: { txId: string }) {
         return this.paymentService.refund(body.txId);
     }
+
+    @Post('chargeback')
+    chargeback(@Body() body: { txId: string }) {
+        return this.paymentService.chargeback(body.txId);
+    }
 }

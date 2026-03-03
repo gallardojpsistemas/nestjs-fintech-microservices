@@ -165,6 +165,28 @@ export class PaymentService {
         };
     }
 
+    async chargeback(txId: string) {
+        const payment = await this.paymentModel.findOne({ txId });
+
+        if (!payment) throw new Error('Payment not found');
+
+        if (payment.type !== 'credit_card')
+            throw new Error('Only credit card payments can have chargeback');
+
+        if (payment.status !== 'paid')
+            throw new Error('Only paid payments can be charged back');
+
+        payment.status = LedgerOperationType.CHARGEBACK;
+        await payment.save();
+
+        await this.withdrawFromWallet(payment);
+
+        return {
+            message: 'Chargeback processed',
+            txId,
+        };
+    }
+
     private async depositToWallet(userId: string, amount: number) {
         const services = JSON.parse(
             this.configService.getOrThrow<string>('SERVICES'),

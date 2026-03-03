@@ -74,28 +74,6 @@ export class WalletService {
         return wallet;
     }
 
-    private async registerLedgerTransaction(
-        fromUserId: string,
-        toUserId: string,
-        amount: number,
-    ): Promise<void> {
-        const services = JSON.parse(
-            this.configService.getOrThrow<string>('SERVICES'),
-        ) as Record<string, string>;
-
-        await serviceCall(services, {
-            service: 'ledger',
-            method: 'POST',
-            path: '/ledger/transaction',
-            data: {
-                fromUserId,
-                toUserId,
-                amount,
-                type: 'transfer',
-            },
-        });
-    }
-
     private async registerLedgerEntry(userId: string, amount: number, type: string, direction: string): Promise<void> {
         const services = JSON.parse(
             this.configService.getOrThrow<string>('SERVICES'),

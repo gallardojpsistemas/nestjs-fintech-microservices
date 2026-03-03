@@ -4,6 +4,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { ConfigService } from '@nestjs/config';
 import { serviceCall } from 'src/common/service-call-util';
+import { LedgerOperationType } from 'src/common/enums/ledger-operation-type.enum';
 
 @Injectable()
 export class WalletService {
@@ -28,7 +29,7 @@ export class WalletService {
             { returnDocument: 'after' },
         );
 
-        await this.registerLedgerEntry(userId, amount, 'deposit', 'credit');
+        await this.registerLedgerEntry(userId, amount, LedgerOperationType.DEPOSIT, 'credit');
 
         return wallet;
     }
@@ -52,8 +53,8 @@ export class WalletService {
         await fromWallet.save();
         await toWallet.save();
 
-        await this.registerLedgerEntry(fromUserId, amount, 'transfer', 'debit');
-        await this.registerLedgerEntry(toUserId, amount, 'transfer', 'credit');
+        await this.registerLedgerEntry(fromUserId, amount, LedgerOperationType.TRANSFER, 'debit');
+        await this.registerLedgerEntry(toUserId, amount, LedgerOperationType.TRANSFER, 'credit');
 
         return {
             fromUserId,
@@ -62,19 +63,19 @@ export class WalletService {
         };
     }
 
-    async withdraw(userId: string, amount: number) {
+    async withdraw(userId: string, amount: number, type: LedgerOperationType) {
         const wallet = await this.walletModel.findOneAndUpdate(
             { userId },
             { $inc: { balance: -amount } },
             { returnDocument: 'after' },
         );
 
-        await this.registerLedgerEntry(userId, amount, 'refund', 'debit');
+        await this.registerLedgerEntry(userId, amount, type, 'debit');
 
         return wallet;
     }
 
-    private async registerLedgerEntry(userId: string, amount: number, type: string, direction: string): Promise<void> {
+    private async registerLedgerEntry(userId: string, amount: number, type: LedgerOperationType, direction: string): Promise<void> {
         const services = JSON.parse(
             this.configService.getOrThrow<string>('SERVICES'),
         ) as Record<string, string>;

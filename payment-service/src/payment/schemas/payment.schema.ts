@@ -15,7 +15,7 @@ export class Payment {
     type: string; // pix
 
     @Prop({ default: 'pending' })
-    status: string; // pending | paid | expired | reissued
+    status: string; // pending | paid | expired | reissued | chargeback
 
     @Prop({ required: true, unique: true })
     txId: string; // simulated PIX transaction id

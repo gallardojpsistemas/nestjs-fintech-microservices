@@ -7,6 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { PixStrategy } from './strategies/pix.strategy';
 import { BoletoStrategy } from './strategies/boleto.strategy';
 import { CreditCardStrategy } from './strategies/credit-card.strategy';
+import { LedgerOperationType } from 'src/common/enums/ledger-operation-type.enum';
 
 @Injectable()
 export class PaymentService {
@@ -237,7 +238,7 @@ export class PaymentService {
             path: `/wallet/${payment.userId}/withdraw`,
             data: {
                 amount: payment.amount,
-                type: 'refund',
+                type: LedgerOperationType.REFUND,
             },
         });
     }

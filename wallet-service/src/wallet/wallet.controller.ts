@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { WalletService } from './wallet.service';
 import { TransferDto } from './dto/transfer.dto';
+import { LedgerOperationType } from 'src/common/enums/ledger-operation-type.enum';
 
 @Controller('wallet')
 export class WalletController {

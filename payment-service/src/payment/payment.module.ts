@@ -5,6 +5,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Payment, PaymentSchema } from './schemas/payment.schema';
 import { PixStrategy } from './strategies/pix.strategy';
 import { BoletoStrategy } from './strategies/boleto.strategy';
+import { CreditCardStrategy } from './strategies/credit-card.strategy';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { BoletoStrategy } from './strategies/boleto.strategy';
     PaymentService,
     PixStrategy,
     BoletoStrategy,
+    CreditCardStrategy,
   ]
 })
 export class PaymentModule { }

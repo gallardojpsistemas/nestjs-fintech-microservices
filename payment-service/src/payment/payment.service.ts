@@ -6,6 +6,7 @@ import { serviceCall } from 'src/common/service-call-util';
 import { ConfigService } from '@nestjs/config';
 import { PixStrategy } from './strategies/pix.strategy';
 import { BoletoStrategy } from './strategies/boleto.strategy';
+import { CreditCardStrategy } from './strategies/credit-card.strategy';
 
 @Injectable()
 export class PaymentService {
@@ -15,6 +16,7 @@ export class PaymentService {
         private readonly configService: ConfigService,
         private readonly pixStrategy: PixStrategy,
         private readonly boletoStrategy: BoletoStrategy,
+        private readonly creditCardStrategy: CreditCardStrategy,
     ) { }
 
     async createPayment(
@@ -29,6 +31,9 @@ export class PaymentService {
 
             case 'boleto':
                 return this.boletoStrategy.createPayment(userId, amount, dueDate!);
+
+            case 'credit_card':
+                return this.creditCardStrategy.createPayment(userId, amount);
 
             default:
                 throw new BadRequestException('Invalid payment type');
@@ -113,6 +118,28 @@ export class PaymentService {
             interest,
             updatedAmount,
             daysLate,
+        };
+    }
+
+    async capture(txId: string) {
+        const payment = await this.paymentModel.findOne({ txId });
+
+        if (!payment) throw new Error('Payment not found');
+
+        if (payment.type !== 'credit_card')
+            throw new Error('Only credit card payments can be captured');
+
+        if (payment.status !== 'authorized')
+            throw new Error('Payment not authorized');
+
+        payment.status = 'paid';
+        await payment.save();
+
+        await this.depositToWallet(payment.userId, payment.amount);
+
+        return {
+            message: 'Payment captured',
+            txId,
         };
     }
 

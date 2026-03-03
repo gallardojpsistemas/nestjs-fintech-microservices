@@ -37,4 +37,9 @@ export class PaymentController {
             body.newDueDate,
         );
     }
+
+    @Post('capture')
+    capture(@Body() body: { txId: string }) {
+        return this.paymentService.capture(body.txId);
+    }
 }

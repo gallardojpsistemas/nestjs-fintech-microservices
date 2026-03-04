@@ -137,7 +137,7 @@ Create `.env` in each service directory. Example for **auth-service**:
 PORT=3000
 MONGO_URI=mongodb://localhost:27017/fintech-auth
 JWT_SECRET=your-secret-key
-SERVICES={"wallet":"http://localhost:3001","ledger":"http://localhost:3002","payment":"http://localhost:3003"}
+SERVICES={"wallet":"http://localhost:3004","ledger":"http://localhost:3002","payment":"http://localhost:3003"}
 ```
 
 Example for **wallet-service**:
@@ -160,7 +160,7 @@ Example for **payment-service**:
 ```env
 PORT=3003
 MONGO_URI=mongodb://localhost:27017/fintech-payment
-SERVICES={"wallet":"http://localhost:3001"}
+SERVICES={"wallet":"http://localhost:3004"}
 ```
 
 ---

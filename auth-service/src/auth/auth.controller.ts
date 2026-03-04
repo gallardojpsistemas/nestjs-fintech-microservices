@@ -38,4 +38,10 @@ export class AuthController {
     async getAllUsers() {
         return await this.authService.getAllUsers();
     }
+
+    @UseGuards(JwtAuthGuard)
+    @Post('logout')
+    async logout() {
+        return { message: 'Logged out successfully' };
+    }
 }

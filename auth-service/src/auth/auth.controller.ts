@@ -32,4 +32,10 @@ export class AuthController {
     getAdminData() {
         return { message: 'Admin only route' };
     }
+
+    @UseGuards(JwtAuthGuard)
+    @Get('users')
+    async getAllUsers() {
+        return await this.authService.getAllUsers();
+    }
 }

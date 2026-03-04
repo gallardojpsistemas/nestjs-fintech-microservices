@@ -58,6 +58,15 @@ export class AuthService {
         };
     }
 
+    async getAllUsers() {
+        const users = await this.usersService.findAll();
+
+        return users.map(user => ({
+            id: user._id.toString(),
+            email: user.email,
+        }));
+    }
+
     private async createWallet(userId: string): Promise<void> {
         await serviceCall(this.services, {
             service: 'wallet',

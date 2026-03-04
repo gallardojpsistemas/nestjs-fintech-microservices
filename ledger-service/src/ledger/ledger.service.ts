@@ -14,4 +14,13 @@ export class LedgerService {
     async createTransaction(data: CreateTransactionDto) {
         return this.transactionModel.create(data);
     }
+
+    async getHistory(userId: string) {
+        return this.transactionModel.find({
+            $or: [{ userId }, { targetUserId: userId }]
+        })
+            .sort({ timestamp: -1 })
+            .limit(20)
+            .exec();
+    }
 }

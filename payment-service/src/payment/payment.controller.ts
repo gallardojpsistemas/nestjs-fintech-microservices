@@ -29,6 +29,11 @@ export class PaymentController {
         return this.paymentService.getPendingPayments();
     }
 
+    @Get('user/:userId/boletos')
+    getUserBoletos(@Param('userId') userId: string) {
+        return this.paymentService.getUserBoletos(userId);
+    }
+
     @Get('transaction/:txId')
     getByTxId(@Param('txId') txId: string) {
         return this.paymentService.getPaymentByTxId(txId);
@@ -63,5 +68,10 @@ export class PaymentController {
     @Post('chargeback')
     chargeback(@Body() body: { txId: string }) {
         return this.paymentService.chargeback(body.txId);
+    }
+
+    @Post('pay-boleto')
+    payBoleto(@Body() body: { txId: string; userId: string }) {
+        return this.paymentService.payBoleto(body.txId, body.userId);
     }
 }

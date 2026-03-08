@@ -46,6 +46,10 @@ export class PaymentService {
         return await this.paymentModel.find({ status: 'pending' }).exec();
     }
 
+    async getUserBoletos(userId: string) {
+        return await this.paymentModel.find({ issuerId: userId, type: 'boleto' }).sort({ createdAt: -1 }).exec();
+    }
+
     async getPaymentByTxId(txId: string) {
         return await this.paymentModel.findOne({ txId }).exec();
     }
@@ -255,5 +259,45 @@ export class PaymentService {
                 type: LedgerOperationType.REFUND,
             },
         });
+    }
+    async payBoleto(txId: string, userId: string) {
+        const payment = await this.paymentModel.findOne({ txId });
+
+        if (!payment) throw new BadRequestException('Payment not found');
+        if (payment.type !== 'boleto') throw new BadRequestException('Only boletos can be paid this way');
+        if (payment.status === 'paid' || payment.status === 'processing') throw new BadRequestException('Boleto already paid or processing');
+        if (payment.status === 'expired') throw new BadRequestException('Boleto is expired');
+
+        if (payment.dueDate) {
+            const now = new Date();
+            const endOfDayDueDate = new Date(payment.dueDate);
+            endOfDayDueDate.setUTCHours(23, 59, 59, 999);
+
+            if (now > endOfDayDueDate) {
+                payment.status = 'expired';
+                await payment.save();
+                throw new BadRequestException('Boleto is expired');
+            }
+        }
+
+        // Withdraw from the paying user's wallet
+        const services = JSON.parse(
+            this.configService.getOrThrow<string>('SERVICES'),
+        ) as Record<string, string>;
+
+        await serviceCall(services, {
+            service: 'wallet',
+            method: 'POST',
+            path: `/wallet/${userId}/withdraw`,
+            data: {
+                amount: payment.amount,
+                type: LedgerOperationType.WITHDRAW,
+            },
+        });
+
+        return {
+            message: 'Boleto paid successfully from user wallet',
+            txId,
+        };
     }
 }

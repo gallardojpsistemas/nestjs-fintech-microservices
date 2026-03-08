@@ -17,7 +17,7 @@ This repository showcases a multi-service financial application where four auton
 - **Payment processing** via multiple methods (PIX, Boleto, Credit Card)
 - **Transaction ledger** for audit trails and financial records
 
-Each service owns its database and communicates via HTTP using a lightweight service-discovery pattern.
+Each service owns its database and communicates via HTTP using a lightweight service-discovery pattern, as well as **RabbitMQ** (hosted on **CloudAMQP**) for asynchronous messaging.
 
 ---
 
@@ -58,6 +58,7 @@ Each service owns its database and communicates via HTTP using a lightweight ser
 - **Framework**: NestJS 11
 - **Language**: TypeScript 5.7
 - **Database**: MongoDB (Mongoose ODM)
+- **Message Broker**: RabbitMQ (hosted on CloudAMQP)
 - **Auth**: Passport, JWT, bcrypt
 - **Linting**: ESLint, Prettier
 

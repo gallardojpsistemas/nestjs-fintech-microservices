@@ -9,16 +9,18 @@ export class PaymentController {
     createPayment(
         @Body() body: {
             type: string;
-            userId: string;
+            issuerId: string;
+            payerId?: string;
             amount: number;
             dueDate?: string;
         },
     ) {
         return this.paymentService.createPayment(
             body.type,
-            body.userId,
+            body.issuerId,
             body.amount,
             body.dueDate,
+            body.payerId,
         );
     }
 

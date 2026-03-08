@@ -12,9 +12,10 @@ export class BoletoStrategy implements PaymentStrategy {
     ) { }
 
     async createPayment(
-        userId: string,
+        issuerId: string,
         amount: number,
         dueDate: string,
+        payerId?: string,
     ) {
         const parsedDate = new Date(dueDate);
 
@@ -24,7 +25,8 @@ export class BoletoStrategy implements PaymentStrategy {
         const txId = `BOLETO-${Date.now()}`;
 
         const payment = await this.paymentModel.create({
-            userId,
+            issuerId,
+            payerId,
             amount,
             type: 'boleto',
             status: 'pending',

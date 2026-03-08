@@ -11,11 +11,12 @@ export class CreditCardStrategy implements PaymentStrategy {
         private paymentModel: Model<PaymentDocument>,
     ) { }
 
-    async createPayment(userId: string, amount: number) {
+    async createPayment(issuerId: string, amount: number, payerId?: string) {
         const txId = `CARD-${Date.now()}`;
 
         const payment = await this.paymentModel.create({
-            userId,
+            issuerId,
+            payerId,
             amount,
             type: 'credit_card',
             status: 'authorized',

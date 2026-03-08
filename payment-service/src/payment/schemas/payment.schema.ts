@@ -6,7 +6,10 @@ export type PaymentDocument = Payment & Document;
 @Schema({ timestamps: true })
 export class Payment {
     @Prop({ required: true })
-    userId: string;
+    issuerId: string;
+
+    @Prop()
+    payerId?: string;
 
     @Prop({ required: true })
     amount: number;

@@ -22,19 +22,20 @@ export class PaymentService {
 
     async createPayment(
         type: string,
-        userId: string,
+        issuerId: string,
         amount: number,
         dueDate?: string,
+        payerId?: string,
     ) {
         switch (type) {
             case 'pix':
-                return this.pixStrategy.createPayment(userId, amount);
+                return this.pixStrategy.createPayment(issuerId, amount, payerId);
 
             case 'boleto':
-                return this.boletoStrategy.createPayment(userId, amount, dueDate!);
+                return this.boletoStrategy.createPayment(issuerId, amount, dueDate!, payerId);
 
             case 'credit_card':
-                return this.creditCardStrategy.createPayment(userId, amount);
+                return this.creditCardStrategy.createPayment(issuerId, amount, payerId);
 
             default:
                 throw new BadRequestException('Invalid payment type');
@@ -83,7 +84,7 @@ export class PaymentService {
         payment.status = 'paid';
         await payment.save();
 
-        await this.depositToWallet(payment.userId, payment.amount);
+        await this.depositToWallet(payment.issuerId, payment.amount);
 
         return {
             message: 'Payment confirmed',
@@ -114,7 +115,8 @@ export class PaymentService {
         const newTxId = `BOLETO-${Date.now()}`;
 
         await this.paymentModel.create({
-            userId: payment.userId,
+            issuerId: payment.issuerId,
+            payerId: payment.payerId,
             amount: updatedAmount,
             type: 'boleto',
             status: 'pending',
@@ -148,7 +150,7 @@ export class PaymentService {
         payment.status = 'paid';
         await payment.save();
 
-        await this.depositToWallet(payment.userId, payment.amount);
+        await this.depositToWallet(payment.issuerId, payment.amount);
 
         return {
             message: 'Payment captured',
@@ -247,7 +249,7 @@ export class PaymentService {
         await serviceCall(services, {
             service: 'wallet',
             method: 'POST',
-            path: `/wallet/${payment.userId}/withdraw`,
+            path: `/wallet/${payment.issuerId}/withdraw`,
             data: {
                 amount: payment.amount,
                 type: LedgerOperationType.REFUND,

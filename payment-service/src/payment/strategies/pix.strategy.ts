@@ -11,11 +11,12 @@ export class PixStrategy implements PaymentStrategy {
         private paymentModel: Model<PaymentDocument>,
     ) { }
 
-    async createPayment(userId: string, amount: number) {
+    async createPayment(issuerId: string, amount: number, payerId?: string) {
         const txId = `PIX-${Date.now()}`;
 
         const payment = await this.paymentModel.create({
-            userId,
+            issuerId,
+            payerId,
             amount,
             type: 'pix',
             status: 'pending',

@@ -39,7 +39,7 @@ export class LedgerService {
         return this.transactionModel.find({
             $or: [{ userId }, { targetUserId: userId }]
         })
-            .sort({ timestamp: -1 })
+            .sort({ createdAt: -1 })
             .limit(20)
             .exec();
     }

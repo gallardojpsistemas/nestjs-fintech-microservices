@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Get } from '@nestjs/common';
+import { Body, Controller, Post, Get, Param } from '@nestjs/common';
 import { PaymentService } from './payment.service';
 
 @Controller('payment')
@@ -25,6 +25,11 @@ export class PaymentController {
     @Get('pending')
     getPendingPayments() {
         return this.paymentService.getPendingPayments();
+    }
+
+    @Get('transaction/:txId')
+    getByTxId(@Param('txId') txId: string) {
+        return this.paymentService.getPaymentByTxId(txId);
     }
 
     @Post('webhook')

@@ -45,6 +45,10 @@ export class PaymentService {
         return await this.paymentModel.find({ status: 'pending' }).exec();
     }
 
+    async getPaymentByTxId(txId: string) {
+        return await this.paymentModel.findOne({ txId }).exec();
+    }
+
     async confirmPayment(txId: string) {
         const payment = await this.paymentModel.findOne({ txId });
 

@@ -8,6 +8,7 @@ import { RolesGuard } from './guards/roles.guard';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { StringValue } from 'ms';
 import { HttpModule } from '@nestjs/axios';
+import { RabbitMQModule } from 'src/rabbitmq/rabbitmq.module';
 
 @Module({
   imports: [
@@ -22,7 +23,8 @@ import { HttpModule } from '@nestjs/axios';
           expiresIn: configService.getOrThrow<string>('JWT_EXPIRES_IN') as StringValue,
         },
       }),
-    })
+    }),
+    RabbitMQModule
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, RolesGuard]

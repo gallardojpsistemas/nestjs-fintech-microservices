@@ -61,7 +61,11 @@ export class PaymentService {
         if (payment.type === 'boleto' && payment.dueDate) {
             const now = new Date();
 
-            if (now > payment.dueDate) {
+            // Allow payment until the end of the day of the dueDate
+            const endOfDayDueDate = new Date(payment.dueDate);
+            endOfDayDueDate.setUTCHours(23, 59, 59, 999);
+
+            if (now > endOfDayDueDate) {
                 payment.status = 'expired';
                 await payment.save();
 

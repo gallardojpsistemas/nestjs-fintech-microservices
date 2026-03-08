@@ -1,18 +1,17 @@
-import { BadRequestException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { UsersService } from 'src/users/users.service';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { serviceCall } from '../common/service-call-util';
-import { ClientProxy } from '@nestjs/microservices';
+import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 
 @Injectable()
 export class AuthService {
     private readonly services: Record<string, string>;
 
     constructor(
-        @Inject('RABBITMQ_SERVICE')
-        private rabbitClient: ClientProxy,
+        private readonly amqpConnection: AmqpConnection,
         private readonly usersService: UsersService,
         private readonly jwtService: JwtService,
         private readonly configService: ConfigService,
@@ -53,10 +52,10 @@ export class AuthService {
         const hashedPassword = await bcrypt.hash(password, 10);
         const user = await this.usersService.create(email, hashedPassword);
 
-        this.rabbitClient.emit('user.created', {
+        await this.amqpConnection.publish('fintech.topic', 'user.created', {
             userId: user._id,
             email: user.email
-        })
+        });
 
         return {
             id: user._id.toString(),

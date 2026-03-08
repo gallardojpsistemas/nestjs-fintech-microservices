@@ -1,27 +1,24 @@
-import { Module } from '@nestjs/common'
-import { ConfigModule, ConfigService } from '@nestjs/config'
-import { ClientsModule, Transport } from '@nestjs/microservices'
+import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { RabbitMQModule as GoLevelUpRabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 
 @Module({
     imports: [
-        ClientsModule.registerAsync([
-            {
-                name: 'RABBITMQ_SERVICE',
-                imports: [ConfigModule],
-                inject: [ConfigService],
-                useFactory: (configService: ConfigService) => ({
-                    transport: Transport.RMQ,
-                    options: {
-                        urls: [configService.getOrThrow<string>('RABBITMQ_URL')],
-                        queue: configService.getOrThrow<string>('RABBITMQ_QUEUE'),
-                        queueOptions: {
-                            durable: true
-                        }
-                    }
-                })
-            }
-        ])
+        GoLevelUpRabbitMQModule.forRootAsync({
+            imports: [ConfigModule],
+            inject: [ConfigService],
+            useFactory: (configService: ConfigService) => ({
+                exchanges: [
+                    {
+                        name: 'fintech.topic',
+                        type: 'topic',
+                    },
+                ],
+                uri: configService.getOrThrow<string>('RABBITMQ_URL'),
+                connectionInitOptions: { wait: false },
+            }),
+        }),
     ],
-    exports: [ClientsModule]
+    exports: [GoLevelUpRabbitMQModule],
 })
 export class RabbitMQModule { }

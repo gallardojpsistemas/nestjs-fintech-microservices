@@ -1,11 +1,11 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { Wallet, WalletDocument } from './schemas/wallet.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { ConfigService } from '@nestjs/config';
 import { serviceCall } from 'src/common/service-call-util';
 import { LedgerOperationType } from 'src/common/enums/ledger-operation-type.enum';
-import { ClientProxy } from '@nestjs/microservices';
+import { AmqpConnection, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
 
 @Injectable()
 export class WalletService {
@@ -13,10 +13,20 @@ export class WalletService {
         @InjectModel(Wallet.name)
         private readonly walletModel: Model<WalletDocument>,
         private readonly configService: ConfigService,
-
-        @Inject('RABBITMQ_SERVICE')
-        private rabbitClient: ClientProxy,
+        private readonly amqpConnection: AmqpConnection,
     ) { }
+
+    @RabbitSubscribe({
+        exchange: 'fintech.topic',
+        routingKey: 'user.created',
+        queue: 'wallet_users_queue',
+    })
+    async handleUserCreated(data: any) {
+        const payload = data?.data ?? data;
+        const { userId } = payload;
+        console.log('user.created event received in service:', userId);
+        await this.createWallet(userId);
+    }
 
     async createWallet(userId: string) {
         return this.walletModel.create({ userId });
@@ -33,7 +43,7 @@ export class WalletService {
             { returnDocument: 'after' },
         );
 
-        this.rabbitClient.emit('wallet.deposit.completed', {
+        await this.amqpConnection.publish('fintech.topic', 'wallet.deposit.completed', {
             userId,
             amount,
             type: LedgerOperationType.DEPOSIT,

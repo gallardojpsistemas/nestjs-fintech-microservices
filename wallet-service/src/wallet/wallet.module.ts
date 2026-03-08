@@ -4,7 +4,6 @@ import { WalletController } from './wallet.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Wallet, WalletSchema } from './schemas/wallet.schema';
 import { RabbitMQModule } from 'src/rabbitmq/rabbitmq.module';
-import { WalletEventsController } from './wallet.events.controller';
 
 @Module({
   imports: [
@@ -14,6 +13,6 @@ import { WalletEventsController } from './wallet.events.controller';
     RabbitMQModule,
   ],
   providers: [WalletService],
-  controllers: [WalletController, WalletEventsController]
+  controllers: [WalletController]
 })
 export class WalletModule { }

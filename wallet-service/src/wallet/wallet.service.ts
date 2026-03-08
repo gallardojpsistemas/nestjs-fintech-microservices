@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Wallet, WalletDocument } from './schemas/wallet.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { ConfigService } from '@nestjs/config';
 import { serviceCall } from 'src/common/service-call-util';
 import { LedgerOperationType } from 'src/common/enums/ledger-operation-type.enum';
+import { ClientProxy } from '@nestjs/microservices';
 
 @Injectable()
 export class WalletService {
@@ -12,6 +13,9 @@ export class WalletService {
         @InjectModel(Wallet.name)
         private readonly walletModel: Model<WalletDocument>,
         private readonly configService: ConfigService,
+
+        @Inject('RABBITMQ_SERVICE')
+        private rabbitClient: ClientProxy,
     ) { }
 
     async createWallet(userId: string) {
@@ -29,7 +33,12 @@ export class WalletService {
             { returnDocument: 'after' },
         );
 
-        await this.registerLedgerEntry(userId, amount, LedgerOperationType.DEPOSIT, 'credit');
+        this.rabbitClient.emit('wallet.deposit.completed', {
+            userId,
+            amount,
+            type: LedgerOperationType.DEPOSIT,
+            direction: 'credit'
+        });
 
         return wallet;
     }

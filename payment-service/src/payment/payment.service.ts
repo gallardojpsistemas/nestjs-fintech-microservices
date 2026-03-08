@@ -105,8 +105,21 @@ export class PaymentService {
         if (payment.type !== 'boleto')
             throw new Error('Only boleto can be reissued');
 
-        if (payment.status !== 'expired')
-            throw new Error('Only expired boletos can be reissued');
+        if (payment.status !== 'expired' && payment.status !== 'pending')
+            throw new Error('Only pending or expired boletos can be reissued');
+
+        if (payment.status === 'pending') {
+            if (!payment.dueDate) throw new Error('Boleto has no due date');
+            const now = new Date();
+            const endOfDayDueDate = new Date(payment.dueDate);
+            endOfDayDueDate.setUTCHours(23, 59, 59, 999);
+
+            if (now <= endOfDayDueDate) {
+                throw new Error('Only expired boletos or past due boletos can be reissued');
+            }
+            payment.status = 'expired';
+            await payment.save();
+        }
 
         const { fine, interest, updatedAmount, daysLate } = this.calculateBoletoPenalty(
             payment.amount,
@@ -125,13 +138,14 @@ export class PaymentService {
             type: 'boleto',
             status: 'pending',
             txId: newTxId,
-            dueDate: new Date(newDueDate),
+            dueDate: new Date(),
             originalTxId: payment.txId,
         });
 
         return {
             oldTxId: payment.txId,
             newTxId,
+            newDueDate: new Date().toISOString(),
             originalAmount: payment.amount,
             fine,
             interest,
@@ -226,12 +240,17 @@ export class PaymentService {
         const diffTime = now.getTime() - dueDate.getTime();
         const daysLate = Math.ceil(diffTime / ONE_DAY_IN_MS);
 
-        const fineRate = 0.02; // 2%
-        const monthlyInterestRate = 0.01; // 1% per month
-        const dailyInterestRate = monthlyInterestRate / 30;
+        let fine = 0;
+        let interest = 0;
 
-        const fine = amount * fineRate;
-        const interest = amount * dailyInterestRate * daysLate;
+        if (daysLate > 0) {
+            const fineRate = 0.02; // 2%
+            const monthlyInterestRate = 0.01; // 1% per month
+            const dailyInterestRate = monthlyInterestRate / 30;
+
+            fine = amount * fineRate;
+            interest = amount * dailyInterestRate * daysLate;
+        }
 
         const updatedAmount = Number(
             (amount + fine + interest).toFixed(2)
@@ -241,7 +260,7 @@ export class PaymentService {
             fine: Number(fine.toFixed(2)),
             interest: Number(interest.toFixed(2)),
             updatedAmount,
-            daysLate,
+            daysLate: Math.max(0, daysLate),
         };
     }
 

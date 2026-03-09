@@ -81,8 +81,12 @@ export class PaymentController {
     @ApiParam({ name: 'txId', description: 'Transaction ID', example: 'BOLETO-1772997472652' })
     @ApiResponse({ status: 200, description: 'Payment details.' })
     @ApiResponse({ status: 404, description: 'Payment not found.' })
-    getByTxId(@Param('txId') txId: string) {
-        return this.paymentService.getPaymentByTxId(txId);
+    async getByTxId(@Param('txId') txId: string) {
+        const payment = await this.paymentService.getPaymentByTxId(txId);
+        if (!payment) {
+            throw new NotFoundException('Payment not found');
+        }
+        return payment;
     }
 
     @Post('webhook')

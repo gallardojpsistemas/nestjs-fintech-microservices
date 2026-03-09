@@ -38,10 +38,10 @@ Each service owns its database and communicates via HTTP using a lightweight ser
 
 | Service | Port | Responsibility |
 |---------|------|----------------|
-| **auth-service** | 3000 | User registration, login, JWT authentication, RBAC (USER/ADMIN) |
-| **wallet-service** | 3001 | Wallet CRUD, deposits, withdrawals, transfers between users |
+| **auth-service** | 3001 | User registration, login, JWT authentication, RBAC (USER/ADMIN) |
 | **ledger-service** | 3002 | Immutable transaction log (deposits, withdrawals, transfers, chargebacks) |
 | **payment-service** | 3003 | Payment creation (PIX, Boleto, Credit Card), webhooks, capture, refund, chargeback |
+| **wallet-service** | 3004 | Wallet CRUD, deposits, withdrawals, transfers between users |
 
 ### Design Patterns
 
@@ -97,6 +97,21 @@ Each service owns its database and communicates via HTTP using a lightweight ser
 
 ---
 
+## API Documentation (Swagger)
+
+The platform provides interactive API documentation for each microservice using OpenAPI (Swagger). You can explore the endpoints, view request/response schemas, and test the APIs directly from your browser. Make sure to use the **Authorize** button to provide your `Bearer` token for protected routes.
+
+Live documentation for the deployed services:
+
+- **Auth Service**: [https://auth-service-b8yr.onrender.com/api/docs](https://auth-service-b8yr.onrender.com/api/docs)
+- **Ledger Service**: [https://nestjs-fintech-microservices.onrender.com/api/docs](https://nestjs-fintech-microservices.onrender.com/api/docs)
+- **Payment Service**: [https://payment-service-in9s.onrender.com/api/docs](https://payment-service-in9s.onrender.com/api/docs)
+- **Wallet Service**: [https://wallet-service-ebzl.onrender.com/api/docs](https://wallet-service-ebzl.onrender.com/api/docs)
+
+*(Note: When running locally, you can access the Swagger UI by appending `/api/docs` to the respective service's base URL, e.g., `http://localhost:3001/api/docs`)*
+
+---
+
 ## Getting Started
 
 ### Prerequisites
@@ -117,17 +132,17 @@ docker-compose up -d
 Each service runs independently. In separate terminals:
 
 ```bash
-# Auth Service (port 3000)
+# Auth Service (port 3001)
 cd auth-service && npm install && npm run start:dev
-
-# Wallet Service (port 3001)
-cd wallet-service && npm install && npm run start:dev
 
 # Ledger Service (port 3002)
 cd ledger-service && npm install && npm run start:dev
 
 # Payment Service (port 3003)
 cd payment-service && npm install && npm run start:dev
+
+# Wallet Service (port 3004)
+cd wallet-service && npm install && npm run start:dev
 ```
 
 ### 3. Environment Variables
@@ -135,7 +150,7 @@ cd payment-service && npm install && npm run start:dev
 Create `.env` in each service directory. Example for **auth-service**:
 
 ```env
-PORT=3000
+PORT=3001
 MONGO_URI=mongodb://localhost:27017/fintech-auth
 JWT_SECRET=your-secret-key
 SERVICES={"wallet":"http://localhost:3004","ledger":"http://localhost:3002","payment":"http://localhost:3003"}
@@ -144,7 +159,7 @@ SERVICES={"wallet":"http://localhost:3004","ledger":"http://localhost:3002","pay
 Example for **wallet-service**:
 
 ```env
-PORT=3001
+PORT=3004
 MONGO_URI=mongodb://localhost:27017/fintech-wallet
 SERVICES={"ledger":"http://localhost:3002"}
 ```

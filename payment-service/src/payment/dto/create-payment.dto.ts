@@ -1,8 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { PaymentType } from '../schemas/payment.schema';
 
 export class CreatePaymentDto {
     @ApiProperty({ description: 'The payment method type (e.g., pix, boleto, credit_card)', example: 'pix' })
-    type: string;
+    type: PaymentType;
 
     @ApiProperty({ description: 'The ID of the issuer (e.g., user requesting the payment)', example: '69adc7eb615ac14170f0be8e' })
     issuerId: string;

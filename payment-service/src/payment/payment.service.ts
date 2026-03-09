@@ -105,8 +105,6 @@ export class PaymentService {
         payment.status = 'paid';
         await payment.save();
 
-        await this.depositToWallet(payment.issuerId, payment.amount);
-
         return {
             message: 'Payment confirmed',
             txId,
@@ -152,12 +150,43 @@ export class PaymentService {
         payment.payerId = payerId;
         await payment.save();
 
-        // 3. Confirm the payment (simulating the webhook success right away for simplicity in this portfolio project,
-        const result = await this.confirmPayment(txId);
+        return {
+            message: 'Boleto paid successfully',
+            txId,
+        };
+    }
+
+    async settlePayment(txId: string) {
+        const payment = await this.paymentModel.findOne({ txId });
+
+        if (!payment)
+            throw new NotFoundException('Payment not found');
+
+        if (payment.status === 'settled') {
+            return {
+                message: 'Already settled',
+                txId,
+            };
+        }
+
+        if (payment.status !== 'paid') {
+            throw new BadRequestException('Boleto must be paid before settlement');
+        }
+
+        if (payment.type !== 'boleto') {
+            throw new BadRequestException('Only boleto settlements are supported this way');
+        }
+
+        payment.status = 'settled';
+        await payment.save();
+
+        await this.amqpConnection.publish('fintech.topic', 'wallet.deposit', {
+            userId: payment.issuerId,
+            amount: payment.amount,
+        });
 
         return {
-            ...result,
-            message: 'Boleto paid successfully',
+            message: 'Boleto settled successfully',
             txId,
         };
     }
@@ -166,22 +195,22 @@ export class PaymentService {
         const payment = await this.paymentModel.findOne({ txId });
 
         if (!payment)
-            throw new Error('Payment not found');
+            throw new NotFoundException('Payment not found')
 
         if (payment.type !== 'boleto')
-            throw new Error('Only boleto can be reissued');
+            throw new BadRequestException('Only boleto can be reissued');
 
         if (payment.status !== 'expired' && payment.status !== 'pending')
-            throw new Error('Only pending or expired boletos can be reissued');
+            throw new BadRequestException('Only pending or expired boletos can be reissued');
 
         if (payment.status === 'pending') {
-            if (!payment.dueDate) throw new Error('Boleto has no due date');
+            if (!payment.dueDate) throw new BadRequestException('Boleto has no due date');
             const now = new Date();
             const endOfDayDueDate = new Date(payment.dueDate);
             endOfDayDueDate.setUTCHours(23, 59, 59, 999);
 
             if (now <= endOfDayDueDate) {
-                throw new Error('Only expired boletos or past due boletos can be reissued');
+                throw new BadRequestException('Only expired boletos or past due boletos can be reissued');
             }
             payment.status = 'expired';
             await payment.save();
@@ -223,7 +252,7 @@ export class PaymentService {
     async capture(txId: string) {
         const payment = await this.paymentModel.findOne({ txId });
 
-        if (!payment) throw new Error('Payment not found');
+        if (!payment) throw new NotFoundException('Payment not found');
 
         if (payment.type !== 'credit_card')
             throw new Error('Only credit card payments can be captured');
@@ -245,7 +274,7 @@ export class PaymentService {
     async refund(txId: string) {
         const payment = await this.paymentModel.findOne({ txId });
 
-        if (!payment) throw new Error('Payment not found');
+        if (!payment) throw new NotFoundException('Payment not found');
 
         if (payment.type !== 'credit_card')
             throw new Error('Only credit card payments can be refunded');
@@ -267,7 +296,7 @@ export class PaymentService {
     async chargeback(txId: string) {
         const payment = await this.paymentModel.findOne({ txId });
 
-        if (!payment) throw new Error('Payment not found');
+        if (!payment) throw new NotFoundException('Payment not found');
 
         if (payment.type !== 'credit_card')
             throw new Error('Only credit card payments can have chargeback');

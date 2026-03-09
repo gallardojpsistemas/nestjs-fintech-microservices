@@ -13,7 +13,7 @@ export class PaymentController {
 
     @Post('')
     @ApiTags('Transactions')
-    @ApiOperation({ summary: 'Create a new payment' })
+    @ApiOperation({ summary: 'Create a new payment (e.g. Boleto or Pix)' })
     @ApiBody({
         type: CreatePaymentDto,
         examples: {
@@ -70,15 +70,6 @@ export class PaymentController {
         return this.paymentService.getPendingPayments();
     }
 
-    @Get('boleto/user/:userId')
-    @ApiTags('Boletos')
-    @ApiOperation({ summary: 'Get boletos by user ID' })
-    @ApiParam({ name: 'userId', description: 'User ID', example: '69adc7eb615ac14170f0be8e' })
-    @ApiResponse({ status: 200, description: 'List of user boletos.' })
-    getUserBoletos(@Param('userId') userId: string) {
-        return this.paymentService.getUserBoletos(userId);
-    }
-
     @Get('transaction/:txId')
     @ApiTags('Transactions')
     @ApiOperation({ summary: 'Get payment by transaction ID' })
@@ -93,13 +84,13 @@ export class PaymentController {
         return payment;
     }
 
-    @Post('webhook')
-    @ApiTags('Webhooks')
-    @ApiOperation({ summary: 'Confirm a payment via webhook (e.g. Boleto or Pix)' })
-    @ApiBody({ type: WebhookTxIdDto })
-    @ApiResponse({ status: 201, description: 'Payment confirmed.' })
-    confirmPayment(@Body() body: WebhookTxIdDto) {
-        return this.paymentService.confirmPayment(body.txId);
+    @Get('boleto/user/:userId')
+    @ApiTags('Boletos')
+    @ApiOperation({ summary: 'Get boletos by user ID' })
+    @ApiParam({ name: 'userId', description: 'User ID', example: '69adc7eb615ac14170f0be8e' })
+    @ApiResponse({ status: 200, description: 'List of user boletos.' })
+    getUserBoletos(@Param('userId') userId: string) {
+        return this.paymentService.getUserBoletos(userId);
     }
 
     @Post('boleto/pay')
@@ -109,6 +100,15 @@ export class PaymentController {
     @ApiResponse({ status: 201, description: 'Boleto paid successfully.' })
     payBoleto(@Body() body: PayBoletoDto) {
         return this.paymentService.payBoleto(body.txId, body.payerId);
+    }
+
+    @Post('boleto/settle')
+    @ApiTags('Boletos')
+    @ApiOperation({ summary: 'Settle a paid boleto (changes status to settled)' })
+    @ApiBody({ type: WebhookTxIdDto })
+    @ApiResponse({ status: 201, description: 'Boleto settled successfully.' })
+    settleBoleto(@Body() body: WebhookTxIdDto) {
+        return this.paymentService.settlePayment(body.txId);
     }
 
     @Post('boleto/reissue')
@@ -151,5 +151,14 @@ export class PaymentController {
     @ApiResponse({ status: 201, description: 'Payment charged back.' })
     chargeback(@Body() body: CardTxIdDto) {
         return this.paymentService.chargeback(body.txId);
+    }
+
+    @Post('webhook')
+    @ApiTags('Webhooks')
+    @ApiOperation({ summary: 'Confirm a payment via webhook (e.g. Boleto or Pix)' })
+    @ApiBody({ type: WebhookTxIdDto })
+    @ApiResponse({ status: 201, description: 'Payment confirmed.' })
+    confirmPayment(@Body() body: WebhookTxIdDto) {
+        return this.paymentService.confirmPayment(body.txId);
     }
 }

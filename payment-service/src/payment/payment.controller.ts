@@ -12,6 +12,7 @@ export class PaymentController {
     constructor(private readonly paymentService: PaymentService) { }
 
     @Post('')
+    @ApiTags('Transactions')
     @ApiOperation({ summary: 'Create a new payment' })
     @ApiBody({
         type: CreatePaymentDto,
@@ -61,14 +62,16 @@ export class PaymentController {
         );
     }
 
-    @Get('pending')
+    @Get('transaction/pending')
+    @ApiTags('Transactions')
     @ApiOperation({ summary: 'Get all pending payments' })
     @ApiResponse({ status: 200, description: 'List of pending payments.' })
     getPendingPayments() {
         return this.paymentService.getPendingPayments();
     }
 
-    @Get('user/:userId/boletos')
+    @Get('boleto/user/:userId')
+    @ApiTags('Boletos')
     @ApiOperation({ summary: 'Get boletos by user ID' })
     @ApiParam({ name: 'userId', description: 'User ID', example: '69adc7eb615ac14170f0be8e' })
     @ApiResponse({ status: 200, description: 'List of user boletos.' })
@@ -77,6 +80,7 @@ export class PaymentController {
     }
 
     @Get('transaction/:txId')
+    @ApiTags('Transactions')
     @ApiOperation({ summary: 'Get payment by transaction ID' })
     @ApiParam({ name: 'txId', description: 'Transaction ID', example: 'BOLETO-1772997472652' })
     @ApiResponse({ status: 200, description: 'Payment details.' })
@@ -90,6 +94,7 @@ export class PaymentController {
     }
 
     @Post('webhook')
+    @ApiTags('Webhooks')
     @ApiOperation({ summary: 'Confirm a payment via webhook (e.g. Boleto or Pix)' })
     @ApiBody({ type: WebhookTxIdDto })
     @ApiResponse({ status: 201, description: 'Payment confirmed.' })
@@ -106,6 +111,8 @@ export class PaymentController {
         return this.paymentService.payBoleto(body.txId, body.payerId);
     }
 
+    @Post('boleto/reissue')
+    @ApiTags('Boletos')
     @ApiOperation({ summary: 'Reissue an expired boleto' })
     @ApiBody({ type: ReissueBoletoDto })
     @ApiResponse({ status: 201, description: 'Boleto reissued.' })
@@ -119,7 +126,8 @@ export class PaymentController {
         );
     }
 
-    @Post('capture')
+    @Post('card/capture')
+    @ApiTags('Credit Cards')
     @ApiOperation({ summary: 'Capture a credit card payment' })
     @ApiBody({ type: CardTxIdDto })
     @ApiResponse({ status: 201, description: 'Payment captured.' })
@@ -127,7 +135,8 @@ export class PaymentController {
         return this.paymentService.capture(body.txId);
     }
 
-    @Post('refund')
+    @Post('card/refund')
+    @ApiTags('Credit Cards')
     @ApiOperation({ summary: 'Refund a payment' })
     @ApiBody({ type: CardTxIdDto })
     @ApiResponse({ status: 201, description: 'Payment refunded.' })
@@ -135,7 +144,8 @@ export class PaymentController {
         return this.paymentService.refund(body.txId);
     }
 
-    @Post('chargeback')
+    @Post('card/chargeback')
+    @ApiTags('Credit Cards')
     @ApiOperation({ summary: 'Chargeback a payment' })
     @ApiBody({ type: CardTxIdDto })
     @ApiResponse({ status: 201, description: 'Payment charged back.' })

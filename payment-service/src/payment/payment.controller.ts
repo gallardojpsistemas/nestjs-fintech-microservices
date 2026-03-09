@@ -5,7 +5,6 @@ import { CreatePaymentDto } from './dto/create-payment.dto';
 import { CardTxIdDto } from './dto/card-txid.dto';
 import { PixTxIdDto } from './dto/pix-txid.dto';
 import { ReissueBoletoDto } from './dto/reissue-boleto.dto';
-import { PayBoletoDto } from './dto/pay-boleto.dto';
 
 @ApiTags('Payment')
 @Controller('payment')
@@ -97,13 +96,5 @@ export class PaymentController {
     @ApiResponse({ status: 201, description: 'Payment charged back.' })
     chargeback(@Body() body: CardTxIdDto) {
         return this.paymentService.chargeback(body.txId);
-    }
-
-    @Post('pay-boleto')
-    @ApiOperation({ summary: 'Simulate paying a boleto' })
-    @ApiBody({ type: PayBoletoDto })
-    @ApiResponse({ status: 201, description: 'Boleto paid.' })
-    payBoleto(@Body() body: PayBoletoDto) {
-        return this.paymentService.payBoleto(body.txId, body.userId);
     }
 }

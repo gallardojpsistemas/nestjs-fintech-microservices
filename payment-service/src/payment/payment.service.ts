@@ -282,35 +282,4 @@ export class PaymentService {
             type: LedgerOperationType.REFUND,
         });
     }
-    async payBoleto(txId: string, userId: string) {
-        const payment = await this.paymentModel.findOne({ txId });
-
-        if (!payment) throw new BadRequestException('Payment not found');
-        if (payment.type !== 'boleto') throw new BadRequestException('Only boletos can be paid this way');
-        if (payment.status === 'paid' || payment.status === 'processing') throw new BadRequestException('Boleto already paid or processing');
-        if (payment.status === 'expired') throw new BadRequestException('Boleto is expired');
-
-        if (payment.dueDate) {
-            const now = new Date();
-            const endOfDayDueDate = new Date(payment.dueDate);
-            endOfDayDueDate.setUTCHours(23, 59, 59, 999);
-
-            if (now > endOfDayDueDate) {
-                payment.status = 'expired';
-                await payment.save();
-                throw new BadRequestException('Boleto is expired');
-            }
-        }
-
-        await this.amqpConnection.publish('fintech.topic', 'wallet.withdraw', {
-            userId,
-            amount: payment.amount,
-            type: LedgerOperationType.WITHDRAW,
-        });
-
-        return {
-            message: 'Boleto paid successfully from user wallet',
-            txId,
-        };
-    }
 }

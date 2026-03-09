@@ -1,9 +1,9 @@
-import { Body, Controller, Post, Get, Param } from '@nestjs/common';
+import { Body, Controller, Post, Get, Param, NotFoundException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
 import { PaymentService } from './payment.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { CardTxIdDto } from './dto/card-txid.dto';
-import { PixTxIdDto } from './dto/pix-txid.dto';
+import { WebhookTxIdDto } from './dto/webhook-txid.dto';
 import { ReissueBoletoDto } from './dto/reissue-boleto.dto';
 
 @ApiTags('Payment')
@@ -13,7 +13,40 @@ export class PaymentController {
 
     @Post('')
     @ApiOperation({ summary: 'Create a new payment' })
-    @ApiBody({ type: CreatePaymentDto })
+    @ApiBody({
+        type: CreatePaymentDto,
+        examples: {
+            pix: {
+                summary: 'Pix Payment',
+                description: 'A Pix payment. Notice that dueDate is omitted for Pix.',
+                value: {
+                    type: 'pix',
+                    issuerId: '69adc7eb615ac14170f0be8e',
+                    amount: 50.00
+                }
+            },
+            boleto: {
+                summary: 'Boleto Payment',
+                description: 'A Boleto payment including a dueDate and payerId.',
+                value: {
+                    type: 'boleto',
+                    issuerId: '69adc7eb615ac14170f0be8e',
+                    payerId: '69adc803615ac14170f0be93',
+                    amount: 100.00,
+                    dueDate: '2026-12-31T23:59:59.000Z'
+                }
+            },
+            credit_card: {
+                summary: 'Credit Card Payment',
+                description: 'A Credit Card payment without a dueDate.',
+                value: {
+                    type: 'credit_card',
+                    issuerId: '69adc7eb615ac14170f0be8e',
+                    amount: 150.00
+                }
+            }
+        }
+    })
     @ApiResponse({ status: 201, description: 'Payment successfully created.' })
     @ApiResponse({ status: 400, description: 'Bad Request.' })
     createPayment(
@@ -53,10 +86,10 @@ export class PaymentController {
     }
 
     @Post('webhook')
-    @ApiOperation({ summary: 'Confirm Pix payment via webhook' })
-    @ApiBody({ type: PixTxIdDto })
+    @ApiOperation({ summary: 'Confirm a payment via webhook (e.g. Boleto or Pix)' })
+    @ApiBody({ type: WebhookTxIdDto })
     @ApiResponse({ status: 201, description: 'Payment confirmed.' })
-    confirmPix(@Body() body: PixTxIdDto) {
+    confirmPayment(@Body() body: WebhookTxIdDto) {
         return this.paymentService.confirmPayment(body.txId);
     }
 

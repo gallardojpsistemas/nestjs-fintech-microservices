@@ -3,12 +3,15 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Payment, PaymentDocument } from '../schemas/payment.schema';
 import { PaymentStrategy } from './payment.strategy';
+import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
+import { LedgerOperationType } from 'src/common/enums/ledger-operation-type.enum';
 
 @Injectable()
 export class PixStrategy implements PaymentStrategy {
     constructor(
         @InjectModel(Payment.name)
         private paymentModel: Model<PaymentDocument>,
+        private readonly amqpConnection: AmqpConnection,
     ) { }
 
     async createPayment(issuerId: string, amount: number, payerId?: string) {
@@ -22,6 +25,24 @@ export class PixStrategy implements PaymentStrategy {
             status: 'pending',
             txId,
         });
+
+        if (payerId) {
+            await this.amqpConnection.publish('fintech.topic', 'wallet.withdraw', {
+                userId: payerId,
+                amount,
+                type: LedgerOperationType.WITHDRAW,
+            });
+        }
+
+        // Simulate asynchronous webhook delay for PIX
+        setTimeout(async () => {
+            try {
+                await this.amqpConnection.publish('fintech.topic', 'payment.pix.webhook', { txId });
+                console.log(`[PixStrategy] Simulated webhook event published for PIX payment: ${txId}`);
+            } catch (error) {
+                console.error(`[PixStrategy] Failed to publish simulated webhook event for PIX payment ${txId}:`, error);
+            }
+        }, 20000);
 
         return {
             txId,

@@ -8,6 +8,7 @@ import { PixStrategy } from './strategies/pix.strategy';
 import { BoletoStrategy } from './strategies/boleto.strategy';
 import { CreditCardStrategy } from './strategies/credit-card.strategy';
 import { LedgerOperationType } from 'src/common/enums/ledger-operation-type.enum';
+import { RabbitSubscribe, AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 
 @Injectable()
 export class PaymentService {
@@ -18,6 +19,7 @@ export class PaymentService {
         private readonly pixStrategy: PixStrategy,
         private readonly boletoStrategy: BoletoStrategy,
         private readonly creditCardStrategy: CreditCardStrategy,
+        private readonly amqpConnection: AmqpConnection,
     ) { }
 
     async createPayment(
@@ -52,6 +54,21 @@ export class PaymentService {
 
     async getPaymentByTxId(txId: string) {
         return await this.paymentModel.findOne({ txId }).exec();
+    }
+
+    @RabbitSubscribe({
+        exchange: 'fintech.topic',
+        routingKey: 'payment.pix.webhook',
+        queue: 'payment_pix_webhook_queue',
+    })
+    async handlePixWebhookListener(data: { txId: string }) {
+        console.log(`[PaymentService] Received simulated PIX webhook for txId: ${data.txId}`);
+        try {
+            const result = await this.confirmPayment(data.txId);
+            console.log(`[PaymentService] Webhook confirmation result:`, result);
+        } catch (error) {
+            console.error(`[PaymentService] Error processing PIX webhook for ${data.txId}:`, error);
+        }
     }
 
     async confirmPayment(txId: string) {
@@ -221,15 +238,9 @@ export class PaymentService {
     }
 
     private async depositToWallet(userId: string, amount: number) {
-        const services = JSON.parse(
-            this.configService.getOrThrow<string>('SERVICES'),
-        ) as Record<string, string>;
-
-        await serviceCall(services, {
-            service: 'wallet',
-            method: 'POST',
-            path: `/wallet/${userId}/deposit`,
-            data: { amount },
+        await this.amqpConnection.publish('fintech.topic', 'wallet.deposit', {
+            userId,
+            amount,
         });
     }
 
@@ -265,18 +276,10 @@ export class PaymentService {
     }
 
     private async withdrawFromWallet(payment: PaymentDocument) {
-        const services = JSON.parse(
-            this.configService.getOrThrow<string>('SERVICES'),
-        ) as Record<string, string>;
-
-        await serviceCall(services, {
-            service: 'wallet',
-            method: 'POST',
-            path: `/wallet/${payment.issuerId}/withdraw`,
-            data: {
-                amount: payment.amount,
-                type: LedgerOperationType.REFUND,
-            },
+        await this.amqpConnection.publish('fintech.topic', 'wallet.withdraw', {
+            userId: payment.issuerId,
+            amount: payment.amount,
+            type: LedgerOperationType.REFUND,
         });
     }
     async payBoleto(txId: string, userId: string) {
@@ -299,19 +302,10 @@ export class PaymentService {
             }
         }
 
-        // Withdraw from the paying user's wallet
-        const services = JSON.parse(
-            this.configService.getOrThrow<string>('SERVICES'),
-        ) as Record<string, string>;
-
-        await serviceCall(services, {
-            service: 'wallet',
-            method: 'POST',
-            path: `/wallet/${userId}/withdraw`,
-            data: {
-                amount: payment.amount,
-                type: LedgerOperationType.WITHDRAW,
-            },
+        await this.amqpConnection.publish('fintech.topic', 'wallet.withdraw', {
+            userId,
+            amount: payment.amount,
+            type: LedgerOperationType.WITHDRAW,
         });
 
         return {

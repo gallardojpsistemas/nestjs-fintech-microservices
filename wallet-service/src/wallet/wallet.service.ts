@@ -36,6 +36,34 @@ export class WalletService {
         return this.walletModel.findOne({ userId });
     }
 
+    @RabbitSubscribe({
+        exchange: 'fintech.topic',
+        routingKey: 'wallet.deposit',
+        queue: 'wallet_deposit_queue',
+    })
+    async handleWalletDeposit(data: { userId: string; amount: number }) {
+        console.log(`[WalletService] Received background deposit for user ${data.userId}: $${data.amount}`);
+        try {
+            await this.deposit(data.userId, data.amount);
+        } catch (error) {
+            console.error(`[WalletService] Error processing deposit for user ${data.userId}:`, error);
+        }
+    }
+
+    @RabbitSubscribe({
+        exchange: 'fintech.topic',
+        routingKey: 'wallet.withdraw',
+        queue: 'wallet_withdraw_queue',
+    })
+    async handleWalletWithdraw(data: { userId: string; amount: number; type: LedgerOperationType }) {
+        console.log(`[WalletService] Received background withdraw for user ${data.userId}: $${data.amount}`);
+        try {
+            await this.withdraw(data.userId, data.amount, data.type);
+        } catch (error) {
+            console.error(`[WalletService] Error processing withdraw for user ${data.userId}:`, error);
+        }
+    }
+
     async deposit(userId: string, amount: number) {
         const wallet = await this.walletModel.findOneAndUpdate(
             { userId },

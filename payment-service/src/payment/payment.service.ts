@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, NotFoundException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Payment, PaymentDocument } from './schemas/payment.schema';
@@ -75,7 +75,7 @@ export class PaymentService {
         const payment = await this.paymentModel.findOne({ txId });
 
         if (!payment)
-            throw new Error('Payment not found');
+            throw new NotFoundException('Payment not found');
 
         if (payment.status === 'paid') {
             return {
@@ -109,6 +109,55 @@ export class PaymentService {
 
         return {
             message: 'Payment confirmed',
+            txId,
+        };
+    }
+
+    async payBoleto(txId: string, payerId: string) {
+        const payment = await this.paymentModel.findOne({ txId });
+
+        if (!payment)
+            throw new NotFoundException('Payment not found');
+
+        if (payment.type !== 'boleto')
+            throw new BadRequestException('Only boletos can be paid with this endpoint');
+
+        if (payment.status === 'paid')
+            throw new BadRequestException('Boleto already paid');
+
+        if (payment.status === 'expired')
+            throw new BadRequestException('Boleto is expired');
+
+        if (payment.dueDate) {
+            const now = new Date();
+            const endOfDayDueDate = new Date(payment.dueDate);
+            endOfDayDueDate.setUTCHours(23, 59, 59, 999);
+
+            if (now > endOfDayDueDate) {
+                payment.status = 'expired';
+                await payment.save();
+                throw new BadRequestException('Boleto is expired');
+            }
+        }
+
+        // 1. Withdraw from payer's wallet
+        await this.amqpConnection.publish('fintech.topic', 'wallet.withdraw', {
+            userId: payerId,
+            amount: payment.amount,
+            // Using WITHDRAW since PAYMENT is not in LedgerOperationType
+            type: LedgerOperationType.WITHDRAW,
+        });
+
+        // 2. We set the payerId on the boleto to keep track of who paid it
+        payment.payerId = payerId;
+        await payment.save();
+
+        // 3. Confirm the payment (simulating the webhook success right away for simplicity in this portfolio project,
+        const result = await this.confirmPayment(txId);
+
+        return {
+            ...result,
+            message: 'Boleto paid successfully',
             txId,
         };
     }

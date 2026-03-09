@@ -5,8 +5,8 @@ import { CreatePaymentDto } from './dto/create-payment.dto';
 import { CardTxIdDto } from './dto/card-txid.dto';
 import { WebhookTxIdDto } from './dto/webhook-txid.dto';
 import { ReissueBoletoDto } from './dto/reissue-boleto.dto';
+import { PayBoletoDto } from './dto/pay-boleto.dto';
 
-@ApiTags('Payment')
 @Controller('payment')
 export class PaymentController {
     constructor(private readonly paymentService: PaymentService) { }
@@ -97,7 +97,15 @@ export class PaymentController {
         return this.paymentService.confirmPayment(body.txId);
     }
 
-    @Post('reissue')
+    @Post('boleto/pay')
+    @ApiTags('Boletos')
+    @ApiOperation({ summary: 'Pay a boleto (simulates backend orchestration)' })
+    @ApiBody({ type: PayBoletoDto })
+    @ApiResponse({ status: 201, description: 'Boleto paid successfully.' })
+    payBoleto(@Body() body: PayBoletoDto) {
+        return this.paymentService.payBoleto(body.txId, body.payerId);
+    }
+
     @ApiOperation({ summary: 'Reissue an expired boleto' })
     @ApiBody({ type: ReissueBoletoDto })
     @ApiResponse({ status: 201, description: 'Boleto reissued.' })

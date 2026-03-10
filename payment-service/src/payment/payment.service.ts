@@ -2,13 +2,13 @@ import { BadRequestException, NotFoundException, Injectable } from '@nestjs/comm
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Payment, PaymentDocument, PaymentStatus } from './schemas/payment.schema';
-import { serviceCall } from 'src/common/service-call-util';
 import { ConfigService } from '@nestjs/config';
 import { PixStrategy } from './strategies/pix.strategy';
 import { BoletoStrategy } from './strategies/boleto.strategy';
 import { CreditCardStrategy } from './strategies/credit-card.strategy';
 import { LedgerOperationType } from 'src/common/enums/ledger-operation-type.enum';
 import { RabbitSubscribe, AmqpConnection } from '@golevelup/nestjs-rabbitmq';
+import { generatePixQr } from 'src/common/pix/pix-qrcode.util';
 
 @Injectable()
 export class PaymentService {
@@ -247,9 +247,20 @@ export class PaymentService {
             pixKey: issuerId,
         });
 
+        const { payload, qrCode } = await generatePixQr(
+            issuerId,
+            'FINTECH DEMO',
+            'ARARANGUA',
+            amount,
+            txId,
+        )
+
         return {
             txId,
+            amount,
             pixKey: issuerId,
+            payload,
+            qrCode,
             status: payment.status,
         };
     }

@@ -9,6 +9,17 @@ export enum PaymentType {
     CREDIT_CARD = 'credit_card',
 }
 
+export enum PaymentStatus {
+    PENDING = 'pending',
+    AUTHORIZED = 'authorized',
+    PAID = 'paid',
+    SETTLED = 'settled',
+    EXPIRED = 'expired',
+    REISSUED = 'reissued',
+    REFUNDED = 'refunded',
+    CHARGEBACK = 'chargeback',
+}
+
 @Schema({ timestamps: true })
 export class Payment {
     @Prop({ required: true })
@@ -21,10 +32,10 @@ export class Payment {
     amount: number;
 
     @Prop({ required: true })
-    type: string; // pix | boleto | credit_card
+    type: PaymentType;
 
-    @Prop({ default: 'pending' })
-    status: string; // pending | paid | settled | expired | reissued | chargeback
+    @Prop({ default: PaymentStatus.PENDING })
+    status: PaymentStatus;
 
     @Prop({ required: true, unique: true })
     txId: string; // simulated PIX transaction id

@@ -7,6 +7,8 @@ import { WebhookTxIdDto } from './dto/webhook-txid.dto';
 import { ReissueBoletoDto } from './dto/reissue-boleto.dto';
 import { PayBoletoDto } from './dto/pay-boleto.dto';
 import { CreatePixTransferDto } from './dto/create-pix-transfer.dto';
+import { CreatePixChargeDto } from './dto/create-pix-charge.dto';
+import { PayPixDto } from './dto/pay-pix.dto';
 
 @Controller('payment')
 export class PaymentController {
@@ -127,6 +129,17 @@ export class PaymentController {
         );
     }
 
+    @Post('pix/charge')
+    @ApiTags('Pix')
+    @ApiOperation({ summary: 'Create a PIX charge (cobrança)' })
+    createPixCharge(
+        @Body() body: CreatePixChargeDto) {
+        return this.paymentService.createPixCharge(
+            body.issuerId,
+            body.amount,
+        );
+    }
+
     @Post('pix/transfer')
     @ApiTags('Pix')
     @ApiOperation({ summary: 'Execute PIX transfer using pix key' })
@@ -165,6 +178,17 @@ export class PaymentController {
     @ApiResponse({ status: 201, description: 'Payment charged back.' })
     chargeback(@Body() body: CardTxIdDto) {
         return this.paymentService.chargeback(body.txId);
+    }
+
+    @Post('simulate/pix/pay')
+    @ApiTags('Pix')
+    @ApiOperation({ summary: 'Simulate PIX payment' })
+    payPix(
+        @Body() body: PayPixDto) {
+        return this.paymentService.simulatePixPayment(
+            body.txId,
+            body.payerId,
+        );
     }
 
     @Post('webhook')

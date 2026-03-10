@@ -1,7 +1,7 @@
 import { BadRequestException, NotFoundException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Payment, PaymentDocument } from './schemas/payment.schema';
+import { Payment, PaymentDocument, PaymentStatus } from './schemas/payment.schema';
 import { serviceCall } from 'src/common/service-call-util';
 import { ConfigService } from '@nestjs/config';
 import { PixStrategy } from './strategies/pix.strategy';
@@ -57,7 +57,7 @@ export class PaymentService {
         if (!payment)
             throw new NotFoundException('Payment not found');
 
-        if (payment.status === 'paid') {
+        if (payment.status === PaymentStatus.PAID) {
             return {
                 message: 'Already processed',
                 txId,
@@ -72,7 +72,7 @@ export class PaymentService {
             endOfDayDueDate.setUTCHours(23, 59, 59, 999);
 
             if (now > endOfDayDueDate) {
-                payment.status = 'expired';
+                payment.status = PaymentStatus.EXPIRED;
                 await payment.save();
 
                 return {
@@ -82,7 +82,7 @@ export class PaymentService {
             }
         }
 
-        payment.status = 'paid';
+        payment.status = PaymentStatus.PAID;
         await payment.save();
 
         return {
@@ -105,10 +105,10 @@ export class PaymentService {
         if (payment.type !== 'boleto')
             throw new BadRequestException('Only boletos can be paid with this endpoint');
 
-        if (payment.status === 'paid')
+        if (payment.status === PaymentStatus.PAID)
             throw new BadRequestException('Boleto already paid');
 
-        if (payment.status === 'expired')
+        if (payment.status === PaymentStatus.EXPIRED)
             throw new BadRequestException('Boleto is expired');
 
         if (payment.dueDate) {
@@ -117,7 +117,7 @@ export class PaymentService {
             endOfDayDueDate.setUTCHours(23, 59, 59, 999);
 
             if (now > endOfDayDueDate) {
-                payment.status = 'expired';
+                payment.status = PaymentStatus.EXPIRED;
                 await payment.save();
                 throw new BadRequestException('Boleto is expired');
             }
@@ -154,7 +154,7 @@ export class PaymentService {
             };
         }
 
-        if (payment.status !== 'paid') {
+        if (payment.status !== PaymentStatus.PAID) {
             throw new BadRequestException('Boleto must be paid before settlement');
         }
 
@@ -162,7 +162,7 @@ export class PaymentService {
             throw new BadRequestException('Only boleto settlements are supported this way');
         }
 
-        payment.status = 'settled';
+        payment.status = PaymentStatus.SETTLED;
         await payment.save();
 
         await this.amqpConnection.publish('fintech.topic', 'wallet.deposit', {
@@ -185,7 +185,7 @@ export class PaymentService {
         if (payment.type !== 'boleto')
             throw new BadRequestException('Only boleto can be reissued');
 
-        if (payment.status !== 'expired' && payment.status !== 'pending')
+        if (payment.status !== PaymentStatus.EXPIRED && payment.status !== 'pending')
             throw new BadRequestException('Only pending or expired boletos can be reissued');
 
         if (payment.status === 'pending') {
@@ -197,7 +197,7 @@ export class PaymentService {
             if (now <= endOfDayDueDate) {
                 throw new BadRequestException('Only expired boletos or past due boletos can be reissued');
             }
-            payment.status = 'expired';
+            payment.status = PaymentStatus.EXPIRED;
             await payment.save();
         }
 
@@ -206,7 +206,7 @@ export class PaymentService {
             payment.dueDate as Date,
         );
 
-        payment.status = 'reissued';
+        payment.status = PaymentStatus.REISSUED;
         await payment.save();
 
         const newTxId = `BOLETO-${Date.now()}`;
@@ -235,6 +235,25 @@ export class PaymentService {
     }
 
     /* Pix */
+    async createPixCharge(issuerId: string, amount: number) {
+        const txId = `PIX-${Date.now()}`;
+
+        const payment = await this.paymentModel.create({
+            issuerId,
+            amount,
+            type: 'pix',
+            status: 'pending',
+            txId,
+            pixKey: issuerId,
+        });
+
+        return {
+            txId,
+            pixKey: issuerId,
+            status: payment.status,
+        };
+    }
+
     async createPixTransfer(payerId: string, pixKey: string, amount: number) {
         const txId = `PIX-${Date.now()}`;
 
@@ -287,12 +306,12 @@ export class PaymentService {
             if (!payment)
                 throw new NotFoundException('Payment not found');
 
-            if (payment.status === 'paid') {
+            if (payment.status === PaymentStatus.PAID) {
                 console.log(`[PIX] already processed ${data.txId}`);
                 return;
             };
 
-            payment.status = 'paid';
+            payment.status = PaymentStatus.PAID;
             await payment.save();
 
             await this.amqpConnection.publish('fintech.topic', 'wallet.deposit', {
@@ -315,10 +334,10 @@ export class PaymentService {
         if (payment.type !== 'credit_card')
             throw new Error('Only credit card payments can be captured');
 
-        if (payment.status !== 'authorized')
+        if (payment.status !== PaymentStatus.AUTHORIZED)
             throw new Error('Payment not authorized');
 
-        payment.status = 'paid';
+        payment.status = PaymentStatus.PAID;
         await payment.save();
 
         await this.depositToWallet(payment.issuerId, payment.amount);
@@ -337,10 +356,10 @@ export class PaymentService {
         if (payment.type !== 'credit_card')
             throw new Error('Only credit card payments can be refunded');
 
-        if (payment.status !== 'paid')
+        if (payment.status !== PaymentStatus.PAID)
             throw new Error('Only paid payments can be refunded');
 
-        payment.status = 'refunded';
+        payment.status = PaymentStatus.REFUNDED;
         await payment.save();
 
         await this.withdrawFromWallet(payment);
@@ -359,16 +378,54 @@ export class PaymentService {
         if (payment.type !== 'credit_card')
             throw new Error('Only credit card payments can have chargeback');
 
-        if (payment.status !== 'paid')
+        if (payment.status !== PaymentStatus.PAID)
             throw new Error('Only paid payments can be charged back');
 
-        payment.status = LedgerOperationType.CHARGEBACK;
+        payment.status = PaymentStatus.CHARGEBACK;
         await payment.save();
 
         await this.withdrawFromWallet(payment);
 
         return {
             message: 'Chargeback processed',
+            txId,
+        };
+    }
+
+    /* Simulate */
+    async simulatePixPayment(txId: string, payerId: string) {
+        const payment = await this.paymentModel.findOne({ txId });
+
+        if (!payment)
+            throw new NotFoundException('Payment not found');
+
+        if (payment.status !== 'pending')
+            throw new BadRequestException('Payment already processed');
+
+        payment.payerId = payerId;
+        await payment.save();
+
+        await this.amqpConnection.publish(
+            'fintech.topic',
+            'wallet.withdraw',
+            {
+                userId: payerId,
+                amount: payment.amount,
+                type: LedgerOperationType.WITHDRAW,
+            },
+        );
+
+        // Webhook Simulando
+        setTimeout(async () => {
+            await this.amqpConnection.publish(
+                'fintech.topic',
+                'payment.pix.webhook',
+                { txId },
+            );
+        }, 30000);
+
+        return {
+            message: 'PIX payment initiated',
             txId,
         };
     }

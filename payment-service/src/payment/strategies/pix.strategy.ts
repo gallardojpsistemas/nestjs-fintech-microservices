@@ -24,6 +24,7 @@ export class PixStrategy implements PaymentStrategy {
             type: 'pix',
             status: 'pending',
             txId,
+            pixKey: issuerId,
         });
 
         if (payerId) {

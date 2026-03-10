@@ -34,6 +34,9 @@ export class Payment {
 
     @Prop()
     originalTxId?: string;
+
+    @Prop()
+    pixKey?: string;
 }
 
 export const PaymentSchema = SchemaFactory.createForClass(Payment);

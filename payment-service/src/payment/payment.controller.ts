@@ -6,6 +6,7 @@ import { CardTxIdDto } from './dto/card-txid.dto';
 import { WebhookTxIdDto } from './dto/webhook-txid.dto';
 import { ReissueBoletoDto } from './dto/reissue-boleto.dto';
 import { PayBoletoDto } from './dto/pay-boleto.dto';
+import { CreatePixTransferDto } from './dto/create-pix-transfer.dto';
 
 @Controller('payment')
 export class PaymentController {
@@ -123,6 +124,19 @@ export class PaymentController {
         return this.paymentService.reissueBoleto(
             body.txId,
             body.newDueDate,
+        );
+    }
+
+    @Post('pix/transfer')
+    @ApiTags('Pix')
+    @ApiOperation({ summary: 'Execute PIX transfer using pix key' })
+    createPixTransfer(
+        @Body() body: CreatePixTransferDto
+    ) {
+        return this.paymentService.createPixTransfer(
+            body.payerId,
+            body.pixKey,
+            body.amount
         );
     }
 

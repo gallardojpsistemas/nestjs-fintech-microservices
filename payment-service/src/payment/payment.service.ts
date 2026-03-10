@@ -48,29 +48,9 @@ export class PaymentService {
         return await this.paymentModel.find({ status: 'pending' }).exec();
     }
 
-    async getUserBoletos(userId: string) {
-        return await this.paymentModel.find({ issuerId: userId, type: 'boleto' }).sort({ createdAt: -1 }).exec();
-    }
-
     async getPaymentByTxId(txId: string) {
         return await this.paymentModel.findOne({ txId }).exec();
     }
-
-    @RabbitSubscribe({
-        exchange: 'fintech.topic',
-        routingKey: 'payment.pix.webhook',
-        queue: 'payment_pix_webhook_queue',
-    })
-    async handlePixWebhookListener(data: { txId: string }) {
-        console.log(`[PaymentService] Received simulated PIX webhook for txId: ${data.txId}`);
-        try {
-            const result = await this.confirmPayment(data.txId);
-            console.log(`[PaymentService] Webhook confirmation result:`, result);
-        } catch (error) {
-            console.error(`[PaymentService] Error processing PIX webhook for ${data.txId}:`, error);
-        }
-    }
-
     async confirmPayment(txId: string) {
         const payment = await this.paymentModel.findOne({ txId });
 
@@ -109,6 +89,11 @@ export class PaymentService {
             message: 'Payment confirmed',
             txId,
         };
+    }
+
+    /* Boleto */
+    async getUserBoletos(userId: string) {
+        return await this.paymentModel.find({ issuerId: userId, type: 'boleto' }).sort({ createdAt: -1 }).exec();
     }
 
     async payBoleto(txId: string, payerId: string) {
@@ -249,6 +234,79 @@ export class PaymentService {
         };
     }
 
+    /* Pix */
+    async createPixTransfer(payerId: string, pixKey: string, amount: number) {
+        const txId = `PIX-${Date.now()}`;
+
+        const payment = await this.paymentModel.create({
+            issuerId: pixKey, // receiver
+            payerId,
+            pixKey,
+            amount,
+            type: 'pix',
+            status: 'pending',
+            txId,
+        });
+
+        await this.amqpConnection.publish(
+            'fintech.topic',
+            'wallet.withdraw',
+            {
+                userId: payerId,
+                amount,
+                type: LedgerOperationType.WITHDRAW,
+            },
+        );
+
+        // Simulate Delay
+        setTimeout(async () => {
+            await this.amqpConnection.publish(
+                'fintech.topic',
+                'payment.pix.webhook',
+                { txId }
+            );
+            console.log(`[PIX] webhook simulated for ${txId}`);
+        }, 30000);
+
+        return {
+            txId,
+            status: payment.status,
+        };
+    }
+
+    @RabbitSubscribe({
+        exchange: 'fintech.topic',
+        routingKey: 'payment.pix.webhook',
+        queue: 'payment_pix_webhook_queue',
+    })
+    async handlePixWebhookListener(data: { txId: string }) {
+        console.log(`[PIX webhook] received for ${data.txId}`);
+        try {
+            const payment = await this.paymentModel.findOne({ txId: data.txId });
+
+            if (!payment)
+                throw new NotFoundException('Payment not found');
+
+            if (payment.status === 'paid') {
+                console.log(`[PIX] already processed ${data.txId}`);
+                return;
+            };
+
+            payment.status = 'paid';
+            await payment.save();
+
+            await this.amqpConnection.publish('fintech.topic', 'wallet.deposit', {
+                userId: payment.issuerId,
+                amount: payment.amount
+            });
+
+            console.log(`[PIX] payment completed ${payment.txId}`);
+        } catch (error) {
+            console.error(`[PIX webhook error]`, error);
+        }
+    }
+
+    /* Credit Card */
     async capture(txId: string) {
         const payment = await this.paymentModel.findOne({ txId });
 
@@ -315,6 +373,7 @@ export class PaymentService {
         };
     }
 
+    /* Helper methods */
     private async depositToWallet(userId: string, amount: number) {
         await this.amqpConnection.publish('fintech.topic', 'wallet.deposit', {
             userId,

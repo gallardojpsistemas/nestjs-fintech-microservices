@@ -71,12 +71,14 @@ export class WalletService {
             { returnDocument: 'after' },
         );
 
-        await this.amqpConnection.publish('fintech.topic', 'wallet.deposit.completed', {
-            userId,
-            amount,
-            type: LedgerOperationType.DEPOSIT,
-            direction: 'credit'
-        });
+        if (wallet) {
+            await this.amqpConnection.publish('fintech.topic', 'wallet.deposit.completed', {
+                userId,
+                amount,
+                type: LedgerOperationType.DEPOSIT,
+                direction: 'credit'
+            });
+        }
 
         return wallet;
     }

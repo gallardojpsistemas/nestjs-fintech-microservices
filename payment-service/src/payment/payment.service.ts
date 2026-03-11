@@ -82,6 +82,14 @@ export class PaymentService {
             }
         }
 
+        if (payment.type === 'pix') {
+            await this.amqpConnection.publish('fintech.topic', 'payment.pix.webhook', { txId });
+            return {
+                message: 'Pix Webhook processing started',
+                txId,
+            };
+        }
+
         payment.status = PaymentStatus.PAID;
         await payment.save();
 
@@ -416,15 +424,17 @@ export class PaymentService {
         payment.payerId = payerId;
         await payment.save();
 
-        await this.amqpConnection.publish(
-            'fintech.topic',
-            'wallet.withdraw',
-            {
-                userId: payerId,
-                amount: payment.amount,
-                type: LedgerOperationType.WITHDRAW,
-            },
-        );
+        if (payment.issuerId !== payerId) {
+            await this.amqpConnection.publish(
+                'fintech.topic',
+                'wallet.withdraw',
+                {
+                    userId: payerId,
+                    amount: payment.amount,
+                    type: LedgerOperationType.WITHDRAW,
+                },
+            );
+        };
 
         // Webhook Simulando
         setTimeout(async () => {

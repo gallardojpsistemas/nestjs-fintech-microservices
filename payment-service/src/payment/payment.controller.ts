@@ -9,6 +9,7 @@ import { PayBoletoDto } from './dto/pay-boleto.dto';
 import { CreatePixTransferDto } from './dto/create-pix-transfer.dto';
 import { CreatePixChargeDto } from './dto/create-pix-charge.dto';
 import { PayPixDto } from './dto/pay-pix.dto';
+import { TokenizeCardDto } from './dto/card-tokenize.dto';
 
 @Controller('payment')
 export class PaymentController {
@@ -16,7 +17,7 @@ export class PaymentController {
 
     @Post('')
     @ApiTags('Transactions')
-    @ApiOperation({ summary: 'Create a new payment (e.g. Boleto or Pix)' })
+    @ApiOperation({ summary: 'Create a new payment (e.g. Boleto, Pix or Credit Card)' })
     @ApiBody({
         type: CreatePaymentDto,
         examples: {
@@ -46,7 +47,10 @@ export class PaymentController {
                 value: {
                     type: 'credit_card',
                     issuerId: '69adc7eb615ac14170f0be8e',
-                    amount: 150.00
+                    amount: 150.00,
+                    payerId: '69adc803615ac14170f0be93',
+                    cardToken: '3afd7ef6-1eef-410b-8aad-069d14569225',
+                    cvv: '123'
                 }
             }
         }
@@ -62,6 +66,8 @@ export class PaymentController {
             body.amount,
             body.dueDate,
             body.payerId,
+            body.cardToken,
+            body.cvv
         );
     }
 
@@ -150,6 +156,20 @@ export class PaymentController {
             body.payerId,
             body.pixKey,
             body.amount
+        );
+    }
+
+    @Post('card/tokenize')
+    @ApiTags('Credit Cards')
+    @ApiOperation({ summary: 'Tokenize a credit card' })
+    @ApiBody({ type: TokenizeCardDto })
+    @ApiResponse({ status: 201, description: 'Card tokenized successfully.' })
+    tokenizeCard(@Body() body: TokenizeCardDto) {
+        return this.paymentService.tokenize(
+            body.cardNumber,
+            body.cardHolder,
+            body.expiryMonth,
+            body.expiryYear,
         );
     }
 

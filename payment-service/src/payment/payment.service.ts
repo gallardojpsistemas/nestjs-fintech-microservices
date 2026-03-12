@@ -2,24 +2,26 @@ import { BadRequestException, NotFoundException, Injectable } from '@nestjs/comm
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Payment, PaymentDocument, PaymentStatus } from './schemas/payment.schema';
-import { ConfigService } from '@nestjs/config';
 import { PixStrategy } from './strategies/pix.strategy';
 import { BoletoStrategy } from './strategies/boleto.strategy';
 import { CreditCardStrategy } from './strategies/credit-card.strategy';
 import { LedgerOperationType } from 'src/common/enums/ledger-operation-type.enum';
 import { RabbitSubscribe, AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { generatePixQr } from 'src/common/pix/pix-qrcode.util';
+import { randomUUID } from 'crypto';
+import { CardToken, CardTokenDocument } from './schemas/card-token.schema';
 
 @Injectable()
 export class PaymentService {
     constructor(
         @InjectModel(Payment.name)
         private paymentModel: Model<PaymentDocument>,
-        private readonly configService: ConfigService,
         private readonly pixStrategy: PixStrategy,
         private readonly boletoStrategy: BoletoStrategy,
         private readonly creditCardStrategy: CreditCardStrategy,
         private readonly amqpConnection: AmqpConnection,
+        @InjectModel(CardToken.name)
+        private readonly cardTokenModel: Model<CardTokenDocument>,
     ) { }
 
     async createPayment(
@@ -28,6 +30,8 @@ export class PaymentService {
         amount: number,
         dueDate?: string,
         payerId?: string,
+        cardToken?: string,
+        cvv?: string,
     ) {
         switch (type) {
             case 'pix':
@@ -37,7 +41,7 @@ export class PaymentService {
                 return this.boletoStrategy.createPayment(issuerId, amount, dueDate!, payerId);
 
             case 'credit_card':
-                return this.creditCardStrategy.createPayment(issuerId, amount, payerId);
+                return this.creditCardStrategy.createPayment(issuerId, amount, payerId, cardToken, cvv);
 
             default:
                 throw new BadRequestException('Invalid payment type');
@@ -51,6 +55,7 @@ export class PaymentService {
     async getPaymentByTxId(txId: string) {
         return await this.paymentModel.findOne({ txId }).exec();
     }
+
     async confirmPayment(txId: string) {
         const payment = await this.paymentModel.findOne({ txId });
 
@@ -345,6 +350,28 @@ export class PaymentService {
     }
 
     /* Credit Card */
+    async tokenize(cardNumber: string, holder: string, expiryMonth: string, expiryYear: string) {
+        const token = randomUUID();
+
+        const brand = this.detectBrand(cardNumber);
+        const last4 = cardNumber.slice(-4);
+
+        await this.cardTokenModel.create({
+            token,
+            brand,
+            last4,
+            holder,
+            expiryMonth,
+            expiryYear,
+        });
+
+        return {
+            token,
+            brand,
+            last4,
+        };
+    }
+
     async capture(txId: string) {
         const payment = await this.paymentModel.findOne({ txId });
 
@@ -352,6 +379,9 @@ export class PaymentService {
 
         if (payment.type !== 'credit_card')
             throw new Error('Only credit card payments can be captured');
+
+        if (payment.status === PaymentStatus.PAID)
+            return { message: 'Already captured', txId };
 
         if (payment.status !== PaymentStatus.AUTHORIZED)
             throw new Error('Payment not authorized');
@@ -496,5 +526,15 @@ export class PaymentService {
             amount: payment.amount,
             type: LedgerOperationType.REFUND,
         });
+    }
+
+    private detectBrand(cardNumber: string): string {
+        if (cardNumber.startsWith('4')) return 'visa';
+
+        if (cardNumber.startsWith('5')) return 'mastercard';
+
+        if (cardNumber.startsWith('34') || cardNumber.startsWith('37')) return 'amex';
+
+        return 'unknown';
     }
 }

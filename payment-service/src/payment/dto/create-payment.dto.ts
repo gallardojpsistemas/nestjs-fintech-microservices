@@ -16,4 +16,10 @@ export class CreatePaymentDto {
 
     @ApiPropertyOptional({ description: 'The due date for boleto payments', example: '2026-12-31T23:59:59.000Z' })
     dueDate?: string;
+
+    @ApiPropertyOptional({ description: 'The card token', example: '59bbe261-4054-44f0-ab7b-597d16982a65' })
+    cardToken?: string;
+
+    @ApiPropertyOptional({ description: 'The CVV', example: '123' })
+    cvv?: string;
 }

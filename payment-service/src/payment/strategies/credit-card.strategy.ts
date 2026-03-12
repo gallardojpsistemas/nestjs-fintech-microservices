@@ -11,7 +11,10 @@ export class CreditCardStrategy implements PaymentStrategy {
         private paymentModel: Model<PaymentDocument>,
     ) { }
 
-    async createPayment(issuerId: string, amount: number, payerId?: string) {
+    async createPayment(issuerId: string, amount: number, payerId?: string, cardToken?: string, cvv?: string) {
+        if (!cardToken || !cvv)
+            throw new Error('Card token and CVV are required for credit card payments');
+
         const txId = `CARD-${Date.now()}`;
 
         const payment = await this.paymentModel.create({

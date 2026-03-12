@@ -350,6 +350,20 @@ export class PaymentService {
     }
 
     /* Credit Card */
+    async getUserCards(userId: string) {
+        return await this.cardTokenModel.find({ userId }).sort({ createdAt: -1 }).exec();
+    }
+
+    async getCardHistory(userId: string) {
+        return await this.paymentModel
+            .find({
+                type: 'credit_card',
+                $or: [{ payerId: userId }, { issuerId: userId }]
+            })
+            .sort({ createdAt: -1 })
+            .exec();
+    }
+
     async tokenize(userId: string, cardNumber: string, holder: string, expiryMonth: string, expiryYear: string) {
         const token = randomUUID();
 

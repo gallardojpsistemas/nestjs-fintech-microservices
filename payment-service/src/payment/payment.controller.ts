@@ -159,6 +159,24 @@ export class PaymentController {
         );
     }
 
+    @Get('card/user/:userId')
+    @ApiTags('Credit Cards')
+    @ApiOperation({ summary: 'Get saved credit cards by user ID' })
+    @ApiParam({ name: 'userId', description: 'User ID', example: '69adc7eb615ac14170f0be8e' })
+    @ApiResponse({ status: 200, description: 'List of user credit cards.' })
+    getUserCards(@Param('userId') userId: string) {
+        return this.paymentService.getUserCards(userId);
+    }
+
+    @Get('card/history/:userId')
+    @ApiTags('Credit Cards')
+    @ApiOperation({ summary: 'Get credit card payment history by user ID' })
+    @ApiParam({ name: 'userId', description: 'User ID', example: '69adc7eb615ac14170f0be8e' })
+    @ApiResponse({ status: 200, description: 'List of credit card payments.' })
+    getCardHistory(@Param('userId') userId: string) {
+        return this.paymentService.getCardHistory(userId);
+    }
+
     @Post('card/tokenize')
     @ApiTags('Credit Cards')
     @ApiOperation({ summary: 'Tokenize a credit card' })

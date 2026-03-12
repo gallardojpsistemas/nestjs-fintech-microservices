@@ -5,9 +5,11 @@ export type CardTokenDocument = CardToken & Document;
 
 @Schema({ timestamps: true })
 export class CardToken {
-
     @Prop({ required: true, unique: true })
     token: string;
+
+    @Prop({ required: true })
+    userId: string;
 
     @Prop({ required: true })
     brand: string;

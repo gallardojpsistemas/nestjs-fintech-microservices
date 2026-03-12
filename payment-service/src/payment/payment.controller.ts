@@ -166,6 +166,7 @@ export class PaymentController {
     @ApiResponse({ status: 201, description: 'Card tokenized successfully.' })
     tokenizeCard(@Body() body: TokenizeCardDto) {
         return this.paymentService.tokenize(
+            body.userId,
             body.cardNumber,
             body.cardHolder,
             body.expiryMonth,

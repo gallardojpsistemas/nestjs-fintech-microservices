@@ -350,7 +350,7 @@ export class PaymentService {
     }
 
     /* Credit Card */
-    async tokenize(cardNumber: string, holder: string, expiryMonth: string, expiryYear: string) {
+    async tokenize(userId: string, cardNumber: string, holder: string, expiryMonth: string, expiryYear: string) {
         const token = randomUUID();
 
         const brand = this.detectBrand(cardNumber);
@@ -358,6 +358,7 @@ export class PaymentService {
 
         await this.cardTokenModel.create({
             token,
+            userId,
             brand,
             last4,
             holder,

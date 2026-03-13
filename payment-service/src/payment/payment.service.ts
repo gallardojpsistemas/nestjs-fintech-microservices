@@ -98,6 +98,19 @@ export class PaymentService {
         payment.status = PaymentStatus.PAID;
         await payment.save();
 
+        if (payment.type === 'boleto') {
+            setTimeout(async () => {
+                try {
+                    await this.settlePayment(txId);
+                    console.log(`[Boleto Webhook] Auto-settled boleto ${txId}`);
+                } catch (error) {
+                    if (error.message !== 'Already settled') {
+                        console.error(`[Boleto Webhook] Failed to auto-settle boleto ${txId}:`, error);
+                    }
+                }
+            }, 30000);
+        }
+
         return {
             message: 'Payment confirmed',
             txId,

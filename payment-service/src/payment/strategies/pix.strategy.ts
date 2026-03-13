@@ -35,7 +35,7 @@ export class PixStrategy implements PaymentStrategy {
             });
         }
 
-        // Simulate asynchronous webhook delay for PIX
+        // Simulate Delay
         setTimeout(async () => {
             try {
                 await this.amqpConnection.publish('fintech.topic', 'payment.pix.webhook', { txId });

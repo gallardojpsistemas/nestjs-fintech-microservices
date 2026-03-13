@@ -38,7 +38,7 @@ export class Payment {
     status: PaymentStatus;
 
     @Prop({ required: true, unique: true })
-    txId: string; // simulated PIX transaction id
+    txId: string;
 
     @Prop()
     dueDate?: Date;

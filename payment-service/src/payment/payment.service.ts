@@ -149,7 +149,6 @@ export class PaymentService {
             }
         }
 
-        // 1. Withdraw from payer's wallet
         await this.amqpConnection.publish('fintech.topic', 'wallet.withdraw', {
             userId: payerId,
             amount: payment.amount,
@@ -157,7 +156,6 @@ export class PaymentService {
             metadata: { paymentMethod: 'boleto', txId }
         });
 
-        // 2. We set the payerId on the boleto to keep track of who paid it
         payment.payerId = payerId;
         await payment.save();
 
@@ -296,7 +294,7 @@ export class PaymentService {
         const txId = `PIX-${Date.now()}`;
 
         const payment = await this.paymentModel.create({
-            issuerId: pixKey, // receiver
+            issuerId: pixKey,
             payerId,
             pixKey,
             amount,
@@ -498,7 +496,7 @@ export class PaymentService {
             );
         }
 
-        // Webhook Simulando
+        // Simulate Delay
         setTimeout(async () => {
             await this.amqpConnection.publish(
                 'fintech.topic',

@@ -420,6 +420,16 @@ export class PaymentService {
 
         await this.depositToWallet(payment);
 
+        if (payment.payerId) {
+            await this.amqpConnection.publish('fintech.topic', 'ledger.transaction.create', {
+                userId: payment.payerId,
+                amount: payment.amount,
+                type: LedgerOperationType.WITHDRAW,
+                direction: 'debit',
+                metadata: { paymentMethod: payment.type, txId: payment.txId }
+            });
+        }
+
         return {
             message: 'Payment captured',
             txId,
@@ -442,6 +452,16 @@ export class PaymentService {
 
         await this.withdrawFromWallet(payment);
 
+        if (payment.payerId) {
+            await this.amqpConnection.publish('fintech.topic', 'ledger.transaction.create', {
+                userId: payment.payerId,
+                amount: payment.amount,
+                type: LedgerOperationType.REFUND,
+                direction: 'credit',
+                metadata: { paymentMethod: payment.type, txId: payment.txId, status: payment.status }
+            });
+        }
+
         return {
             message: 'Payment refunded',
             txId,
@@ -463,6 +483,16 @@ export class PaymentService {
         await payment.save();
 
         await this.withdrawFromWallet(payment);
+
+        if (payment.payerId) {
+            await this.amqpConnection.publish('fintech.topic', 'ledger.transaction.create', {
+                userId: payment.payerId,
+                amount: payment.amount,
+                type: LedgerOperationType.REFUND,
+                direction: 'credit',
+                metadata: { paymentMethod: payment.type, txId: payment.txId, status: payment.status }
+            });
+        }
 
         return {
             message: 'Chargeback processed',

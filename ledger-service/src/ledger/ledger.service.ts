@@ -32,6 +32,26 @@ export class LedgerService {
         });
     }
 
+    @RabbitSubscribe({
+        exchange: 'fintech.topic',
+        routingKey: 'ledger.transaction.create',
+        queue: 'ledger_transaction_create_queue',
+    })
+    async handleDirectRecord(data: any) {
+        const payload = data?.data ?? data;
+        const { userId, amount, type, direction, metadata } = payload;
+
+        console.log('direct ledger event received:', payload);
+
+        await this.createTransaction({
+            userId,
+            amount,
+            type,
+            direction,
+            metadata
+        });
+    }
+
     async createTransaction(data: CreateTransactionDto) {
         return this.transactionModel.create(data);
     }

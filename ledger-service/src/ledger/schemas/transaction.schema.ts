@@ -19,6 +19,9 @@ export class Transaction {
 
     @Prop()
     referenceId?: string;
+
+    @Prop({ type: Object })
+    metadata?: Record<string, any>;
 }
 
 export const TransactionSchema = SchemaFactory.createForClass(Transaction);

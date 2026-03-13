@@ -12,8 +12,11 @@ export class CreateTransactionDto {
     @ApiProperty({ enum: LedgerOperationType, description: 'Type of ledger operation', example: LedgerOperationType.DEPOSIT })
     type: LedgerOperationType;
 
-    @ApiProperty({ description: 'Direction of the transaction', enum: ['credit', 'debit'], example: 'credit' })
-    direction: 'credit' | 'debit';
+    @ApiProperty({ description: 'Transaction direction', example: 'credit' })
+    direction: string;
+
+    @ApiPropertyOptional({ description: 'Additional metadata providing context to the transaction' })
+    metadata?: Record<string, any>;
 
     @ApiPropertyOptional({ description: 'Optional reference ID (e.g., txId from payment service)', example: 'tx-98765' })
     referenceId?: string; // txId opcional

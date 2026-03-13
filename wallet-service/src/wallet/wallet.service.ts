@@ -41,10 +41,10 @@ export class WalletService {
         routingKey: 'wallet.deposit',
         queue: 'wallet_deposit_queue',
     })
-    async handleWalletDeposit(data: { userId: string; amount: number }) {
+    async handleWalletDeposit(data: { userId: string; amount: number; metadata?: any }) {
         console.log(`[WalletService] Received background deposit for user ${data.userId}: $${data.amount}`);
         try {
-            await this.deposit(data.userId, data.amount);
+            await this.deposit(data.userId, data.amount, data.metadata);
         } catch (error) {
             console.error(`[WalletService] Error processing deposit for user ${data.userId}:`, error);
         }
@@ -55,16 +55,16 @@ export class WalletService {
         routingKey: 'wallet.withdraw',
         queue: 'wallet_withdraw_queue',
     })
-    async handleWalletWithdraw(data: { userId: string; amount: number; type: LedgerOperationType }) {
+    async handleWalletWithdraw(data: { userId: string; amount: number; type: LedgerOperationType; metadata?: any }) {
         console.log(`[WalletService] Received background withdraw for user ${data.userId}: $${data.amount}`);
         try {
-            await this.withdraw(data.userId, data.amount, data.type);
+            await this.withdraw(data.userId, data.amount, data.type, data.metadata);
         } catch (error) {
             console.error(`[WalletService] Error processing withdraw for user ${data.userId}:`, error);
         }
     }
 
-    async deposit(userId: string, amount: number) {
+    async deposit(userId: string, amount: number, metadata?: any) {
         const wallet = await this.walletModel.findOneAndUpdate(
             { userId },
             { $inc: { balance: amount } },
@@ -76,14 +76,15 @@ export class WalletService {
                 userId,
                 amount,
                 type: LedgerOperationType.DEPOSIT,
-                direction: 'credit'
+                direction: 'credit',
+                metadata
             });
         }
 
         return wallet;
     }
 
-    async transfer(fromUserId: string, toUserId: string, amount: number) {
+    async transfer(fromUserId: string, toUserId: string, amount: number, metadata?: any) {
         if (amount <= 0)
             throw new Error('Invalid transfer amount');
 
@@ -102,8 +103,8 @@ export class WalletService {
         await fromWallet.save();
         await toWallet.save();
 
-        await this.registerLedgerEntry(fromUserId, amount, LedgerOperationType.TRANSFER, 'debit');
-        await this.registerLedgerEntry(toUserId, amount, LedgerOperationType.TRANSFER, 'credit');
+        await this.registerLedgerEntry(fromUserId, amount, LedgerOperationType.TRANSFER, 'debit', metadata);
+        await this.registerLedgerEntry(toUserId, amount, LedgerOperationType.TRANSFER, 'credit', metadata);
 
         return {
             fromUserId,
@@ -112,19 +113,19 @@ export class WalletService {
         };
     }
 
-    async withdraw(userId: string, amount: number, type: LedgerOperationType) {
+    async withdraw(userId: string, amount: number, type: LedgerOperationType, metadata?: any) {
         const wallet = await this.walletModel.findOneAndUpdate(
             { userId },
             { $inc: { balance: -amount } },
             { returnDocument: 'after' },
         );
 
-        await this.registerLedgerEntry(userId, amount, type, 'debit');
+        await this.registerLedgerEntry(userId, amount, type, 'debit', metadata);
 
         return wallet;
     }
 
-    private async registerLedgerEntry(userId: string, amount: number, type: LedgerOperationType, direction: string): Promise<void> {
+    private async registerLedgerEntry(userId: string, amount: number, type: LedgerOperationType, direction: string, metadata?: any): Promise<void> {
         const services = JSON.parse(
             this.configService.getOrThrow<string>('SERVICES'),
         ) as Record<string, string>;
@@ -133,7 +134,7 @@ export class WalletService {
             service: 'ledger',
             method: 'POST',
             path: '/ledger/transaction',
-            data: { userId, amount, type, direction },
+            data: { userId, amount, type, direction, metadata },
         });
     }
 }

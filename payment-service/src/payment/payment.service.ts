@@ -140,8 +140,8 @@ export class PaymentService {
         await this.amqpConnection.publish('fintech.topic', 'wallet.withdraw', {
             userId: payerId,
             amount: payment.amount,
-            // Using WITHDRAW since PAYMENT is not in LedgerOperationType
             type: LedgerOperationType.WITHDRAW,
+            metadata: { paymentMethod: 'boleto', txId }
         });
 
         // 2. We set the payerId on the boleto to keep track of who paid it
@@ -181,6 +181,7 @@ export class PaymentService {
         await this.amqpConnection.publish('fintech.topic', 'wallet.deposit', {
             userId: payment.issuerId,
             amount: payment.amount,
+            metadata: { paymentMethod: 'boleto', txId }
         });
 
         return {
@@ -298,6 +299,7 @@ export class PaymentService {
                 userId: payerId,
                 amount,
                 type: LedgerOperationType.WITHDRAW,
+                metadata: { paymentMethod: 'pix', txId }
             },
         );
 
@@ -340,7 +342,8 @@ export class PaymentService {
 
             await this.amqpConnection.publish('fintech.topic', 'wallet.deposit', {
                 userId: payment.issuerId,
-                amount: payment.amount
+                amount: payment.amount,
+                metadata: { paymentMethod: 'pix', txId: payment.txId }
             });
 
             console.log(`[PIX] payment completed ${payment.txId}`);
@@ -404,7 +407,7 @@ export class PaymentService {
         payment.status = PaymentStatus.PAID;
         await payment.save();
 
-        await this.depositToWallet(payment.issuerId, payment.amount);
+        await this.depositToWallet(payment);
 
         return {
             message: 'Payment captured',
@@ -477,9 +480,10 @@ export class PaymentService {
                     userId: payerId,
                     amount: payment.amount,
                     type: LedgerOperationType.WITHDRAW,
+                    metadata: { paymentMethod: 'pix', txId }
                 },
             );
-        };
+        }
 
         // Webhook Simulando
         setTimeout(async () => {
@@ -497,10 +501,11 @@ export class PaymentService {
     }
 
     /* Helper methods */
-    private async depositToWallet(userId: string, amount: number) {
+    private async depositToWallet(payment: PaymentDocument) {
         await this.amqpConnection.publish('fintech.topic', 'wallet.deposit', {
-            userId,
-            amount,
+            userId: payment.issuerId,
+            amount: payment.amount,
+            metadata: { paymentMethod: payment.type, txId: payment.txId }
         });
     }
 
@@ -540,6 +545,7 @@ export class PaymentService {
             userId: payment.issuerId,
             amount: payment.amount,
             type: LedgerOperationType.REFUND,
+            metadata: { paymentMethod: payment.type, txId: payment.txId, status: payment.status }
         });
     }
 

@@ -18,17 +18,18 @@ export class LedgerService {
         queue: 'ledger_wallet_queue',
     })
     async handleDeposit(data: any) {
-        const payload = data?.data ?? data
-        const { userId, amount, type, direction } = payload
+        const payload = data?.data ?? data;
+        const { userId, amount, type, direction, metadata } = payload;
 
-        console.log('deposit event received in service:', payload)
+        console.log('deposit event received in service:', payload);
 
         await this.createTransaction({
             userId,
             amount,
             type,
-            direction
-        })
+            direction,
+            metadata
+        });
     }
 
     async createTransaction(data: CreateTransactionDto) {
